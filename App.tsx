@@ -1,3 +1,4 @@
+import 'react-native-url-polyfill/auto'
 import React, { useEffect, useRef, useState } from 'react'
 import { AppState, type AppStateStatus } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
