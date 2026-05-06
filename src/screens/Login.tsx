@@ -24,14 +24,68 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>
 
 const DEFAULT_TENANT = process.env.EXPO_PUBLIC_TENANT_SLUG ?? 'default'
 
+// ─── Dev quick-login presets ─────────────────────────────────────────────────
+interface DevUser {
+  label: string
+  role: string
+  email: string
+  password: string
+  tenant: string
+  color: string
+}
+
+const DEV_USERS: DevUser[] = [
+  {
+    label: 'Admin',
+    role: 'admin',
+    email: 'admin@remitx.dev',
+    password: 'Admin@123',
+    tenant: 'default',
+    color: colors.primary,
+  },
+  {
+    label: 'Maker',
+    role: 'maker',
+    email: 'maker@remitx.dev',
+    password: 'Maker@123',
+    tenant: 'default',
+    color: colors.success,
+  },
+  {
+    label: 'Checker',
+    role: 'checker',
+    email: 'checker@remitx.dev',
+    password: 'Checker@123',
+    tenant: 'default',
+    color: colors.warning,
+  },
+  {
+    label: 'Viewer',
+    role: 'viewer',
+    email: 'viewer@remitx.dev',
+    password: 'Viewer@123',
+    tenant: 'default',
+    color: colors.info,
+  },
+]
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function Login({ navigation }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [tenantSlug, setTenantSlug] = useState(DEFAULT_TENANT)
   const [showTenant, setShowTenant] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [activeDevUser, setActiveDevUser] = useState<string | null>(null)
 
   const setAuth = useAuthStore((s) => s.setAuth)
+
+  const applyDevUser = (u: DevUser) => {
+    setEmail(u.email)
+    setPassword(u.password)
+    setTenantSlug(u.tenant)
+    setActiveDevUser(u.role)
+  }
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -108,7 +162,6 @@ export function Login({ navigation }: Props) {
               secureTextEntry
               leftIcon="lock-closed-outline"
               textContentType="password"
-              style={styles.inputSpacing}
             />
 
             {/* Tenant slug toggle */}
@@ -146,13 +199,47 @@ export function Login({ navigation }: Props) {
           </View>
 
           {/* Footer */}
-          <Text style={styles.footer}>
-            Secured with end-to-end encryption
-          </Text>
+          <Text style={styles.footer}>Secured with end-to-end encryption</Text>
           <View style={styles.footerBadge}>
             <Ionicons name="shield-checkmark" size={13} color={colors.success} />
             <Text style={styles.footerBadgeText}>PCI-DSS compliant</Text>
           </View>
+
+          {/* ── Dev quick-login — only in __DEV__ builds ── */}
+          {__DEV__ && (
+            <View style={styles.devPanel}>
+              <View style={styles.devHeader}>
+                <View style={styles.devBadge}>
+                  <Text style={styles.devBadgeText}>DEV</Text>
+                </View>
+                <Text style={styles.devTitle}>Quick login</Text>
+              </View>
+              <View style={styles.devGrid}>
+                {DEV_USERS.map((u) => {
+                  const active = activeDevUser === u.role
+                  return (
+                    <TouchableOpacity
+                      key={u.role}
+                      style={[
+                        styles.devChip,
+                        { borderColor: u.color },
+                        active && { backgroundColor: u.color },
+                      ]}
+                      onPress={() => applyDevUser(u)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.devChipText, active && styles.devChipTextActive]}>
+                        {u.label}
+                      </Text>
+                      <Text style={[styles.devChipEmail, active && styles.devChipEmailActive]}>
+                        {u.email}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -197,10 +284,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
-  subheading: {
-    fontSize: fontSize.md,
-    color: colors.textMuted,
-  },
+  subheading: { fontSize: fontSize.md, color: colors.textMuted },
 
   card: {
     backgroundColor: colors.card,
@@ -211,7 +295,6 @@ const styles = StyleSheet.create({
     gap: spacing.base,
     marginBottom: spacing.xl,
   },
-  inputSpacing: { marginTop: 0 },
 
   tenantToggle: {
     flexDirection: 'row',
@@ -221,7 +304,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   tenantToggleLabel: { fontSize: fontSize.sm, color: colors.textMuted },
-
   loginBtn: { marginTop: spacing.xs },
 
   footer: {
@@ -237,4 +319,62 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   footerBadgeText: { fontSize: fontSize.xs, color: colors.success },
+
+  // ── Dev panel ──
+  devPanel: {
+    marginTop: spacing.xl,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    borderStyle: 'dashed',
+    padding: spacing.base,
+    gap: spacing.md,
+  },
+  devHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  devBadge: {
+    backgroundColor: colors.warning,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  devBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    color: colors.black,
+    letterSpacing: 1,
+  },
+  devTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.warning,
+  },
+  devGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  devChip: {
+    flex: 1,
+    minWidth: '45%',
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    gap: 2,
+  },
+  devChipText: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  devChipTextActive: { color: colors.white },
+  devChipEmail: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  devChipEmailActive: { color: 'rgba(255,255,255,0.75)' },
 })
