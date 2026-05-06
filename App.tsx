@@ -1,4 +1,3 @@
-import 'react-native-url-polyfill/auto'
 import React, { useEffect, useRef, useState } from 'react'
 import { AppState, type AppStateStatus } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
@@ -6,7 +5,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StatusBar } from 'expo-status-bar'
-import * as LocalAuthentication from 'expo-local-authentication'
 
 import { useAuthStore } from '@/stores/authStore'
 import { AuthStack } from '@/navigation/AuthStack'
@@ -35,7 +33,7 @@ export default function App() {
   const appState = useRef<AppStateStatus>(AppState.currentState)
   const backgroundedAt = useRef<number | null>(null)
 
-  // Biometric gate on resume after >30s in background
+  // Lazy-load expo-local-authentication to avoid startup URL bug
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (next) => {
       const prev = appState.current
@@ -48,8 +46,9 @@ export default function App() {
       if ((prev === 'background' || prev === 'inactive') && next === 'active') {
         const elapsed = backgroundedAt.current ? Date.now() - backgroundedAt.current : 0
         if (isAuthenticated && elapsed > 30_000) {
-          const hasHardware = await LocalAuthentication.hasHardwareAsync()
-          const enrolled = await LocalAuthentication.isEnrolledAsync()
+          const LocalAuth = await import('expo-local-authentication')
+          const hasHardware = await LocalAuth.hasHardwareAsync()
+          const enrolled = await LocalAuth.isEnrolledAsync()
           if (hasHardware && enrolled) setBiometricLocked(true)
         }
         backgroundedAt.current = null
