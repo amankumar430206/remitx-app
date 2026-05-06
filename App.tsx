@@ -6,14 +6,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StatusBar } from 'expo-status-bar'
 import * as LocalAuthentication from 'expo-local-authentication'
-import * as SplashScreen from 'expo-splash-screen'
 
 import { useAuthStore } from '@/stores/authStore'
 import { AuthStack } from '@/navigation/AuthStack'
 import { AppTabs } from '@/navigation/AppTabs'
 import { BiometricPrompt } from '@/screens/BiometricPrompt'
-
-try { SplashScreen.preventAutoHideAsync() } catch {}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,27 +29,10 @@ const linking = {
 }
 
 export default function App() {
-  const { isAuthenticated, _hasHydrated, clearAuth } = useAuthStore()
-  const [ready, setReady] = useState(false)
+  const { isAuthenticated, clearAuth } = useAuthStore()
   const [biometricLocked, setBiometricLocked] = useState(false)
   const appState = useRef<AppStateStatus>(AppState.currentState)
   const backgroundedAt = useRef<number | null>(null)
-
-  // Hide splash once hydrated — with 2s max timeout fallback
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => {})
-      setReady(true)
-    }, 2000)
-
-    if (_hasHydrated) {
-      clearTimeout(timeout)
-      SplashScreen.hideAsync().catch(() => {})
-      setReady(true)
-    }
-
-    return () => clearTimeout(timeout)
-  }, [_hasHydrated])
 
   // Biometric gate on resume after >30s in background
   useEffect(() => {
@@ -76,8 +56,6 @@ export default function App() {
     })
     return () => sub.remove()
   }, [isAuthenticated])
-
-  if (!ready) return null
 
   if (isAuthenticated && biometricLocked) {
     return (
