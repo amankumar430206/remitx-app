@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useQuery } from '@tanstack/react-query'
 import paymentsApi, { type Payment } from '@/api/payments'
 import { colors } from '@/theme/colors'
-import { spacing, fontSize, radius } from '@/theme/spacing'
+import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo, statusColor } from '@/utils/format'
 import { StatusBadge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -31,17 +31,20 @@ export function PaymentHistory() {
       </View>
       <View style={styles.meta}>
         <Text style={styles.bene} numberOfLines={1}>{item.beneficiary_name ?? 'Beneficiary'}</Text>
-        <Text style={styles.time}>{formatTimeAgo(item.created_at)}</Text>
+        <Text style={styles.time}>
+          {item.source_currency} → {item.dest_currency} · {formatTimeAgo(item.created_at)}
+        </Text>
       </View>
       <View style={styles.right}>
         <Text style={styles.amount}>{formatMoney(item.source_amount, item.source_currency)}</Text>
+        <Text style={styles.destAmount}>{formatMoney(item.dest_amount, item.dest_currency)}</Text>
         <StatusBadge status={item.status} size="sm" />
       </View>
     </TouchableOpacity>
   )
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Payments</Text>
@@ -82,7 +85,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.base,
+    paddingHorizontal: screenPadding, paddingVertical: spacing.base,
   },
   title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
   newBtn: {
@@ -92,7 +95,7 @@ const styles = StyleSheet.create({
   },
   newBtnText: { fontSize: fontSize.sm, fontWeight: '700', color: colors.white },
 
-  list: { paddingHorizontal: spacing.xl, paddingBottom: spacing['3xl'] },
+  list: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
   sep: { height: spacing.xs },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -103,6 +106,7 @@ const styles = StyleSheet.create({
   meta: { flex: 1, gap: 2 },
   bene: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
   time: { fontSize: fontSize.xs, color: colors.textMuted },
-  right: { alignItems: 'flex-end', gap: 4 },
+  right: { alignItems: 'flex-end', gap: 3 },
   amount: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
+  destAmount: { fontSize: fontSize.xs, color: colors.textMuted },
 })

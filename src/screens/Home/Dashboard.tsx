@@ -12,8 +12,8 @@ import accountsApi from '@/api/accounts'
 import paymentsApi from '@/api/payments'
 import { useAuthStore } from '@/stores/authStore'
 import { colors } from '@/theme/colors'
-import { spacing, fontSize, radius } from '@/theme/spacing'
-import { formatMoney, formatTimeAgo, statusColor, statusLabel } from '@/utils/format'
+import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
+import { formatMoney, formatTimeAgo, statusColor, currencyColor } from '@/utils/format'
 import { StatusBadge } from '@/components/ui/Badge'
 import { type AppTabsParamList } from '@/navigation/AppTabs'
 
@@ -38,9 +38,10 @@ export function Dashboard() {
   }, {})
 
   const firstName = user?.first_name ?? user?.email?.split('@')[0] ?? 'there'
+  const roleLabel = user?.role?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ?? ''
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={colors.primary} />}
@@ -48,15 +49,18 @@ export function Dashboard() {
       >
         {/* Greeting */}
         <View style={styles.greeting}>
-          <View>
+          <View style={{ gap: 4 }}>
             <Text style={styles.greetSub}>Good day,</Text>
-            <Text style={styles.greetName}>
-              {firstName} <Text style={styles.wave}>👋</Text>
-            </Text>
+            <Text style={styles.greetName}>{firstName} <Text style={styles.wave}>👋</Text></Text>
+            {!!roleLabel && (
+              <View style={styles.rolePill}>
+                <Text style={styles.roleText}>{roleLabel}</Text>
+              </View>
+            )}
           </View>
-          <TouchableOpacity style={styles.avatarBtn}>
+          <View style={styles.avatarBtn}>
             <Text style={styles.avatarText}>{firstName[0]?.toUpperCase()}</Text>
-          </TouchableOpacity>
+          </View>
         </View>
 
         {/* Balance cards */}
@@ -69,26 +73,30 @@ export function Dashboard() {
           </View>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardsRow} contentContainerStyle={{ gap: spacing.md, paddingRight: spacing.xl }}>
-            {(accountsData ?? []).map((acc) => (
-              <TouchableOpacity
-                key={acc.id}
-                style={styles.balanceCard}
-                onPress={() => nav.navigate('Accounts')}
-                activeOpacity={0.85}
-              >
-                <View style={styles.cardTop}>
-                  <View style={styles.currencyPill}>
-                    <Text style={styles.currencyPillText}>{acc.currency}</Text>
+            {(accountsData ?? []).map((acc) => {
+              const cColor = currencyColor(acc.currency)
+              return (
+                <TouchableOpacity
+                  key={acc.id}
+                  style={styles.balanceCard}
+                  onPress={() => nav.navigate('Accounts')}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.cardAccent, { backgroundColor: cColor }]} />
+                  <View style={styles.cardTop}>
+                    <View style={[styles.currencyPill, { backgroundColor: cColor + '22' }]}>
+                      <Text style={[styles.currencyPillText, { color: cColor }]}>{acc.currency}</Text>
+                    </View>
+                    <View style={[styles.statusDot, { backgroundColor: acc.status === 'active' ? colors.success : colors.textDisabled }]} />
                   </View>
-                  <View style={[styles.statusDot, { backgroundColor: acc.status === 'active' ? colors.success : colors.textDisabled }]} />
-                </View>
-                <Text style={styles.balanceAmount}>{formatMoney(acc.balance, acc.currency)}</Text>
-                <Text style={styles.balanceLabel}>Available balance</Text>
-                {acc.account_number && (
-                  <Text style={styles.accountNum}>···· {acc.account_number.slice(-4)}</Text>
-                )}
-              </TouchableOpacity>
-            ))}
+                  <Text style={styles.balanceAmount}>{formatMoney(acc.balance, acc.currency)}</Text>
+                  <Text style={styles.balanceLabel}>Available balance</Text>
+                  {acc.account_number && (
+                    <Text style={styles.accountNum}>···· {acc.account_number.slice(-4)}</Text>
+                  )}
+                </TouchableOpacity>
+              )
+            })}
           </ScrollView>
         )}
 
@@ -135,7 +143,9 @@ export function Dashboard() {
                   <Text style={styles.paymentBene} numberOfLines={1}>
                     {p.beneficiary_name ?? 'Beneficiary'}
                   </Text>
-                  <Text style={styles.paymentTime}>{formatTimeAgo(p.created_at)}</Text>
+                  <Text style={styles.paymentTime}>
+                    {p.source_currency} → {p.dest_currency} · {formatTimeAgo(p.created_at)}
+                  </Text>
                 </View>
                 <View style={styles.paymentRight}>
                   <Text style={styles.paymentAmount}>
@@ -158,28 +168,34 @@ const styles = StyleSheet.create({
 
   greeting: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl, paddingTop: spacing.base, paddingBottom: spacing.lg,
+    paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.lg,
   },
   greetSub: { fontSize: fontSize.sm, color: colors.textMuted },
-  greetName: { fontSize: fontSize.xl, fontWeight: '700', color: colors.textPrimary },
+  greetName: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.3 },
   wave: { fontSize: fontSize.xl },
-  avatarBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center',
+  rolePill: {
+    alignSelf: 'flex-start', backgroundColor: colors.primaryFaded,
+    borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2,
   },
-  avatarText: { fontSize: fontSize.base, fontWeight: '700', color: colors.primary },
+  roleText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.primaryLight, letterSpacing: 0.4 },
+  avatarBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: colors.primary + '55',
+  },
+  avatarText: { fontSize: fontSize.base, fontWeight: '800', color: colors.primary },
 
   sectionLabel: {
     fontSize: fontSize.sm, fontWeight: '700', color: colors.textMuted,
     letterSpacing: 0.8, textTransform: 'uppercase',
-    paddingHorizontal: spacing.xl, marginBottom: spacing.sm, marginTop: spacing.lg,
+    paddingHorizontal: screenPadding, marginBottom: spacing.sm, marginTop: spacing.lg,
   },
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: spacing.xl },
   seeAll: { fontSize: fontSize.sm, color: colors.primary, fontWeight: '600' },
 
   loader: { marginVertical: spacing.xl },
   emptyCard: {
-    marginHorizontal: spacing.xl, padding: spacing.xl,
+    marginHorizontal: screenPadding, padding: spacing.xl,
     backgroundColor: colors.card, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
@@ -187,19 +203,20 @@ const styles = StyleSheet.create({
 
   cardsRow: { paddingLeft: spacing.xl, marginBottom: spacing.xs },
   balanceCard: {
-    width: 200, backgroundColor: colors.surface, borderRadius: radius.lg,
+    width: 220, backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.borderLight, padding: spacing.base, gap: spacing.xs,
+    overflow: 'hidden',
   },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardAccent: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xs },
   currencyPill: {
-    backgroundColor: colors.primaryFaded, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2,
   },
-  currencyPillText: { fontSize: fontSize.xs, fontWeight: '700', color: colors.primaryLight },
+  currencyPillText: { fontSize: fontSize.xs, fontWeight: '800' },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  balanceAmount: { fontSize: fontSize['2xl'], fontWeight: '800', color: colors.textPrimary, marginTop: spacing.sm },
+  balanceAmount: { fontSize: fontSize['2xl'], fontWeight: '800', color: colors.textPrimary, marginTop: spacing.sm, letterSpacing: -0.5 },
   balanceLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  accountNum: { fontSize: fontSize.xs, color: colors.textDisabled, marginTop: spacing.xs },
+  accountNum: { fontSize: fontSize.xs, color: colors.textDisabled, marginTop: 2 },
 
   quickRow: {
     flexDirection: 'row', justifyContent: 'space-around',
@@ -209,7 +226,7 @@ const styles = StyleSheet.create({
   quickIcon: { width: 52, height: 52, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center' },
   quickLabel: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '500' },
 
-  paymentList: { marginHorizontal: spacing.xl, gap: spacing.xs },
+  paymentList: { marginHorizontal: screenPadding, gap: spacing.xs },
   paymentRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.card, borderRadius: radius.md,

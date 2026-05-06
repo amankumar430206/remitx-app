@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import paymentsApi, { type Payment } from '@/api/payments'
 import { colors } from '@/theme/colors'
-import { spacing, fontSize, radius } from '@/theme/spacing'
+import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo } from '@/utils/format'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -49,6 +49,7 @@ export function ApprovalQueue() {
 
   const renderItem = ({ item }: { item: Payment }) => (
     <View style={styles.card}>
+      <View style={styles.cardAccent} />
       <View style={styles.cardHeader}>
         <View style={styles.cardLeft}>
           <View style={styles.avatar}>
@@ -100,7 +101,7 @@ export function ApprovalQueue() {
   const isApproving = action === 'approve'
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Approval Queue</Text>
         {data && (
@@ -171,14 +172,15 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.base,
+    paddingHorizontal: screenPadding, paddingVertical: spacing.base,
   },
   title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
   countBadge: { backgroundColor: colors.primary, borderRadius: radius.full, minWidth: 24, height: 24, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xs },
   countText: { fontSize: fontSize.xs, fontWeight: '700', color: colors.white },
 
-  list: { paddingHorizontal: spacing.xl, paddingBottom: spacing['3xl'] },
-  card: { backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.base, gap: spacing.md },
+  list: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
+  card: { backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.base, gap: spacing.md, overflow: 'hidden' },
+  cardAccent: { position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, backgroundColor: colors.warning },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center' },

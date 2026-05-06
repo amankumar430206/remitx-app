@@ -55,6 +55,20 @@ export function statusLabel(status: string): string {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+export function currencyColor(currency: string): string {
+  switch (currency.toUpperCase()) {
+    case 'USD': return '#10B981'
+    case 'EUR': return '#3B82F6'
+    case 'GBP': return '#8B5CF6'
+    case 'INR': return '#F59E0B'
+    case 'AED': return '#06B6D4'
+    case 'JPY': return '#EF4444'
+    case 'CAD': return '#F97316'
+    case 'AUD': return '#84CC16'
+    default:    return '#6366F1'
+  }
+}
+
 export function generateIdempotencyKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }

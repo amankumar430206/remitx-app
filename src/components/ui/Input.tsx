@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   wrapper: { gap: spacing.xs },
   label: {
     fontSize: fontSize.sm,
-    fontWeight: '500',
+    fontWeight: '600',
     color: colors.textSecondary,
     letterSpacing: 0.2,
   },
@@ -68,12 +68,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     paddingHorizontal: spacing.base,
     minHeight: 52,
   },
-  focused: { borderColor: colors.primary },
+  focused: { borderColor: colors.primary, backgroundColor: colors.primaryFaded + '33' },
   errored: { borderColor: colors.danger },
   leftIcon: { marginRight: spacing.sm },
   input: {

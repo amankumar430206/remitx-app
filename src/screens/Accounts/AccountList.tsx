@@ -8,8 +8,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { useQuery } from '@tanstack/react-query'
 import accountsApi, { type Account } from '@/api/accounts'
 import { colors } from '@/theme/colors'
-import { spacing, fontSize, radius } from '@/theme/spacing'
-import { formatMoney } from '@/utils/format'
+import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
+import { formatMoney, currencyColor } from '@/utils/format'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { AccountDetail } from './AccountDetail'
 
@@ -21,11 +21,14 @@ export function AccountList() {
     queryFn: () => accountsApi.list().then((r) => r.data.data),
   })
 
-  const renderItem = ({ item }: { item: Account }) => (
+  const renderItem = ({ item }: { item: Account }) => {
+    const cColor = currencyColor(item.currency)
+    return (
     <TouchableOpacity style={styles.card} onPress={() => setSelected(item)} activeOpacity={0.8}>
+      <View style={[styles.cardAccent, { backgroundColor: cColor }]} />
       <View style={styles.cardLeft}>
-        <View style={styles.currencyCircle}>
-          <Text style={styles.currencyText}>{item.currency}</Text>
+        <View style={[styles.currencyCircle, { backgroundColor: cColor + '22' }]}>
+          <Text style={[styles.currencyText, { color: cColor }]}>{item.currency}</Text>
         </View>
         <View>
           <Text style={styles.currency}>{item.currency} Account</Text>
@@ -43,10 +46,10 @@ export function AccountList() {
         </View>
       </View>
     </TouchableOpacity>
-  )
+  )}
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Accounts</Text>
       </View>
@@ -72,21 +75,23 @@ export function AccountList() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: spacing.xl, paddingVertical: spacing.base },
+  header: { paddingHorizontal: screenPadding, paddingVertical: spacing.base },
   title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
 
-  list: { paddingHorizontal: spacing.xl, paddingBottom: spacing['3xl'] },
+  list: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
   card: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.card, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border, padding: spacing.base,
+    overflow: 'hidden',
   },
+  cardAccent: { position: 'absolute', top: 0, left: 0, bottom: 0, width: 3 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   currencyCircle: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  currencyText: { fontSize: fontSize.sm, fontWeight: '800', color: colors.primary },
+  currencyText: { fontSize: fontSize.sm, fontWeight: '800' },
   currency: { fontSize: fontSize.base, fontWeight: '600', color: colors.textPrimary },
   accountNum: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   cardRight: { alignItems: 'flex-end', gap: spacing.xs },

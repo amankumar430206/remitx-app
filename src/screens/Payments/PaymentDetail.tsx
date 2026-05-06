@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { type Payment } from '@/api/payments'
 import { colors } from '@/theme/colors'
-import { spacing, fontSize, radius } from '@/theme/spacing'
+import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatDateTime, statusColor, statusLabel } from '@/utils/format'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
@@ -30,9 +30,17 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Hero amount */}
-        <View style={styles.hero}>
+        <View style={[styles.hero, { borderTopColor: statusColor(p.status) }]}>
+          <View style={[styles.heroIconWrap, { backgroundColor: statusColor(p.status) + '22' }]}>
+            <Ionicons name="swap-horizontal" size={22} color={statusColor(p.status)} />
+          </View>
           <Text style={styles.heroAmount}>{formatMoney(p.source_amount, p.source_currency)}</Text>
-          <Text style={styles.heroArrow}>→ {formatMoney(p.dest_amount, p.dest_currency)}</Text>
+          <View style={styles.heroRoute}>
+            <Text style={styles.heroRouteCcy}>{p.source_currency}</Text>
+            <Ionicons name="arrow-forward" size={13} color={colors.textMuted} />
+            <Text style={styles.heroRouteCcy}>{p.dest_currency}</Text>
+            <Text style={styles.heroRouteDest}>{formatMoney(p.dest_amount, p.dest_currency)}</Text>
+          </View>
           <StatusBadge status={p.status} />
         </View>
 
@@ -91,14 +99,21 @@ const styles = StyleSheet.create({
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.base,
+    paddingHorizontal: screenPadding, paddingVertical: spacing.base,
   },
   title: { fontSize: fontSize.lg, fontWeight: '700', color: colors.textPrimary },
   scroll: { padding: spacing.xl, gap: spacing.base, paddingBottom: spacing['3xl'] },
 
-  hero: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
-  heroAmount: { fontSize: fontSize['3xl'], fontWeight: '800', color: colors.textPrimary },
-  heroArrow: { fontSize: fontSize.md, color: colors.textMuted },
+  hero: {
+    alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm,
+    backgroundColor: colors.card, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border, borderTopWidth: 3,
+  },
+  heroIconWrap: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  heroAmount: { fontSize: fontSize['3xl'], fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5 },
+  heroRoute: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  heroRouteCcy: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: '600' },
+  heroRouteDest: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: '600', marginLeft: spacing.xs },
 
   sectionLabel: {
     fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted,

@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useQuery } from '@tanstack/react-query'
 import accountsApi, { type Account, type LedgerEntry } from '@/api/accounts'
 import { colors } from '@/theme/colors'
-import { spacing, fontSize, radius } from '@/theme/spacing'
+import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatDateTime } from '@/utils/format'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -91,13 +91,13 @@ const styles = StyleSheet.create({
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.base,
+    paddingHorizontal: screenPadding, paddingVertical: spacing.base,
   },
   title: { fontSize: fontSize.lg, fontWeight: '700', color: colors.textPrimary },
 
   hero: {
     alignItems: 'center', paddingVertical: spacing.xl,
-    marginHorizontal: spacing.xl, marginBottom: spacing.sm,
+    marginHorizontal: screenPadding, marginBottom: spacing.sm,
     backgroundColor: colors.card, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border, gap: spacing.xs,
   },
@@ -109,10 +109,10 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted,
     textTransform: 'uppercase', letterSpacing: 0.8,
-    paddingHorizontal: spacing.xl, marginBottom: spacing.sm,
+    paddingHorizontal: screenPadding, marginBottom: spacing.sm,
   },
 
-  list: { paddingHorizontal: spacing.xl, paddingBottom: spacing['3xl'] },
+  list: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
   sep: { height: 1, backgroundColor: colors.border, marginLeft: 60 },
 
   entry: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },

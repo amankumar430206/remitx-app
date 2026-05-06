@@ -36,34 +36,34 @@ interface DevUser {
 
 const DEV_USERS: DevUser[] = [
   {
-    label: "Admin",
-    role: "admin",
-    email: "admin@remitx.dev",
-    password: "Admin@123",
+    label: "Super Admin",
+    role: "super_admin",
+    email: "admin@remitx.com",
+    password: "Admin@RemitX2024!",
     tenant: "remitx",
     color: colors.primary,
   },
   {
     label: "Maker",
     role: "maker",
-    email: "maker@remitx.dev",
-    password: "Maker@123",
+    email: "maker1@remitx.com",
+    password: "Test@1234!",
     tenant: "remitx",
     color: colors.success,
   },
   {
     label: "Checker",
     role: "checker",
-    email: "checker@remitx.dev",
-    password: "Checker@123",
+    email: "checker1@remitx.com",
+    password: "Test@1234!",
     tenant: "remitx",
     color: colors.warning,
   },
   {
-    label: "Viewer",
-    role: "viewer",
-    email: "viewer@remitx.dev",
-    password: "Viewer@123",
+    label: "Client Admin",
+    role: "client_admin",
+    email: "cadmin@remitx.com",
+    password: "Test@1234!",
     tenant: "remitx",
     color: colors.info,
   },
@@ -111,7 +111,6 @@ export function Login({ navigation }: Props) {
         (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ??
         "Invalid credentials. Please try again.";
       Alert.alert("Login failed", msg);
-      console.log
     } finally {
       setLoading(false);
     }

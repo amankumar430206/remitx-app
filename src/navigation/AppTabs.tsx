@@ -2,6 +2,7 @@ import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import { Platform, StyleSheet } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Dashboard } from '@/screens/Home/Dashboard'
 import { PaymentHistory } from '@/screens/Payments/PaymentHistory'
 import { ApprovalQueue } from '@/screens/Approve/ApprovalQueue'
@@ -36,6 +37,9 @@ const tabIcons: Record<keyof AppTabsParamList, TabIcon> = {
 function SettingsScreen() { return <PlaceholderScreen name="Settings" /> }
 
 export function AppTabs() {
+  const insets = useSafeAreaInsets()
+  const tabBarHeight = Platform.OS === 'ios' ? 60 : 56
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -53,7 +57,10 @@ export function AppTabs() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, {
+          height: tabBarHeight + insets.bottom,
+          paddingBottom: insets.bottom,
+        }],
         tabBarItemStyle: styles.tabItem,
       })}
     >
@@ -72,10 +79,9 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     borderTopWidth: 1,
     paddingTop: 6,
-    height: Platform.OS === 'ios' ? 85 : 65,
     elevation: 0,
     shadowOpacity: 0,
   },
-  tabItem: { paddingBottom: Platform.OS === 'ios' ? 4 : 8 },
+  tabItem: { paddingBottom: 4 },
   tabLabel: { fontSize: fontSize.xs, fontWeight: '500', marginTop: 2 },
 })
