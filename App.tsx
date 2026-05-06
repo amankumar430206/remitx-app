@@ -13,14 +13,11 @@ import { AuthStack } from '@/navigation/AuthStack'
 import { AppTabs } from '@/navigation/AppTabs'
 import { BiometricPrompt } from '@/screens/BiometricPrompt'
 
-SplashScreen.preventAutoHideAsync()
+try { SplashScreen.preventAutoHideAsync() } catch {}
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      retry: 1,
-    },
+    queries: { staleTime: 30_000, retry: 1 },
   },
 })
 
@@ -36,13 +33,25 @@ const linking = {
 
 export default function App() {
   const { isAuthenticated, _hasHydrated, clearAuth } = useAuthStore()
+  const [ready, setReady] = useState(false)
   const [biometricLocked, setBiometricLocked] = useState(false)
   const appState = useRef<AppStateStatus>(AppState.currentState)
   const backgroundedAt = useRef<number | null>(null)
 
-  // Hide splash when store is hydrated
+  // Hide splash once hydrated — with 2s max timeout fallback
   useEffect(() => {
-    if (_hasHydrated) SplashScreen.hideAsync()
+    const timeout = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {})
+      setReady(true)
+    }, 2000)
+
+    if (_hasHydrated) {
+      clearTimeout(timeout)
+      SplashScreen.hideAsync().catch(() => {})
+      setReady(true)
+    }
+
+    return () => clearTimeout(timeout)
   }, [_hasHydrated])
 
   // Biometric gate on resume after >30s in background
@@ -60,9 +69,7 @@ export default function App() {
         if (isAuthenticated && elapsed > 30_000) {
           const hasHardware = await LocalAuthentication.hasHardwareAsync()
           const enrolled = await LocalAuthentication.isEnrolledAsync()
-          if (hasHardware && enrolled) {
-            setBiometricLocked(true)
-          }
+          if (hasHardware && enrolled) setBiometricLocked(true)
         }
         backgroundedAt.current = null
       }
@@ -70,7 +77,7 @@ export default function App() {
     return () => sub.remove()
   }, [isAuthenticated])
 
-  if (!_hasHydrated) return null
+  if (!ready) return null
 
   if (isAuthenticated && biometricLocked) {
     return (
@@ -78,10 +85,7 @@ export default function App() {
         <StatusBar style="light" />
         <BiometricPrompt
           onSuccess={() => setBiometricLocked(false)}
-          onFallback={() => {
-            clearAuth()
-            setBiometricLocked(false)
-          }}
+          onFallback={() => { clearAuth(); setBiometricLocked(false) }}
         />
       </SafeAreaProvider>
     )
