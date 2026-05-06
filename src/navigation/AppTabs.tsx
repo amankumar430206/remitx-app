@@ -1,7 +1,11 @@
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
-import { StyleSheet, Platform } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
+import { Dashboard } from '@/screens/Home/Dashboard'
+import { PaymentHistory } from '@/screens/Payments/PaymentHistory'
+import { ApprovalQueue } from '@/screens/Approve/ApprovalQueue'
+import { AccountList } from '@/screens/Accounts/AccountList'
 import { PlaceholderScreen } from '@/screens/placeholders/PlaceholderScreen'
 import { colors } from '@/theme/colors'
 import { fontSize } from '@/theme/spacing'
@@ -29,10 +33,6 @@ const tabIcons: Record<keyof AppTabsParamList, TabIcon> = {
   Settings: { active: 'settings', inactive: 'settings-outline' },
 }
 
-function DashboardScreen() { return <PlaceholderScreen name="Dashboard" /> }
-function PaymentsScreen() { return <PlaceholderScreen name="Payments" /> }
-function ApproveScreen() { return <PlaceholderScreen name="Approve" /> }
-function AccountsScreen() { return <PlaceholderScreen name="Accounts" /> }
 function SettingsScreen() { return <PlaceholderScreen name="Settings" /> }
 
 export function AppTabs() {
@@ -57,10 +57,10 @@ export function AppTabs() {
         tabBarItemStyle: styles.tabItem,
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Payments" component={PaymentsScreen} />
-      <Tab.Screen name="Approve" component={ApproveScreen} />
-      <Tab.Screen name="Accounts" component={AccountsScreen} />
+      <Tab.Screen name="Dashboard" component={Dashboard} />
+      <Tab.Screen name="Payments" component={PaymentHistory} />
+      <Tab.Screen name="Approve" component={ApprovalQueue} />
+      <Tab.Screen name="Accounts" component={AccountList} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   )
@@ -76,12 +76,6 @@ const styles = StyleSheet.create({
     elevation: 0,
     shadowOpacity: 0,
   },
-  tabItem: {
-    paddingBottom: Platform.OS === 'ios' ? 4 : 8,
-  },
-  tabLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: '500',
-    marginTop: 2,
-  },
+  tabItem: { paddingBottom: Platform.OS === 'ios' ? 4 : 8 },
+  tabLabel: { fontSize: fontSize.xs, fontWeight: '500', marginTop: 2 },
 })

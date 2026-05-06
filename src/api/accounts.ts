@@ -1,0 +1,41 @@
+import { apiClient } from './client'
+
+export interface Account {
+  id: string
+  currency: string
+  balance: string
+  account_number?: string
+  provider_name?: string
+  status: string
+  created_at: string
+}
+
+export interface LedgerEntry {
+  id: string
+  entry_type: 'credit' | 'debit'
+  amount: string
+  currency: string
+  balance_after: string
+  description: string
+  created_at: string
+  payment_id?: string
+}
+
+export interface PaginatedResponse<T> {
+  success: boolean
+  data: T[]
+  meta: { page: number; limit: number; total: number }
+}
+
+const accounts = {
+  list: () =>
+    apiClient.get<{ success: boolean; data: Account[] }>('/accounts'),
+
+  get: (id: string) =>
+    apiClient.get<{ success: boolean; data: Account & { recentEntries: LedgerEntry[] } }>(`/accounts/${id}`),
+
+  ledger: (id: string, params?: { page?: number; limit?: number }) =>
+    apiClient.get<PaginatedResponse<LedgerEntry>>(`/accounts/${id}/ledger`, { params }),
+}
+
+export default accounts

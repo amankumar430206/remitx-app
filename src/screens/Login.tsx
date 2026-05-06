@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,120 +8,118 @@ import {
   Platform,
   TouchableOpacity,
   Alert,
-} from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { type NativeStackScreenProps } from '@react-navigation/native-stack'
-import { Ionicons } from '@expo/vector-icons'
-import { Input } from '@/components/ui/Input'
-import { Button } from '@/components/ui/Button'
-import { colors } from '@/theme/colors'
-import { spacing, fontSize, radius } from '@/theme/spacing'
-import { useAuthStore } from '@/stores/authStore'
-import authApi from '@/api/auth'
-import { type AuthStackParamList } from '@/navigation/AuthStack'
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { type NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { colors } from "@/theme/colors";
+import { spacing, fontSize, radius } from "@/theme/spacing";
+import { useAuthStore } from "@/stores/authStore";
+import authApi from "@/api/auth";
+import { type AuthStackParamList } from "@/navigation/AuthStack";
 
-type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>
+type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
-const DEFAULT_TENANT = process.env.EXPO_PUBLIC_TENANT_SLUG ?? 'default'
+const DEFAULT_TENANT = process.env.EXPO_PUBLIC_TENANT_SLUG ?? "default";
 
 // ─── Dev quick-login presets ─────────────────────────────────────────────────
 interface DevUser {
-  label: string
-  role: string
-  email: string
-  password: string
-  tenant: string
-  color: string
+  label: string;
+  role: string;
+  email: string;
+  password: string;
+  tenant: string;
+  color: string;
 }
 
 const DEV_USERS: DevUser[] = [
   {
-    label: 'Admin',
-    role: 'admin',
-    email: 'admin@remitx.dev',
-    password: 'Admin@123',
-    tenant: 'default',
+    label: "Admin",
+    role: "admin",
+    email: "admin@remitx.dev",
+    password: "Admin@123",
+    tenant: "remitx",
     color: colors.primary,
   },
   {
-    label: 'Maker',
-    role: 'maker',
-    email: 'maker@remitx.dev',
-    password: 'Maker@123',
-    tenant: 'default',
+    label: "Maker",
+    role: "maker",
+    email: "maker@remitx.dev",
+    password: "Maker@123",
+    tenant: "remitx",
     color: colors.success,
   },
   {
-    label: 'Checker',
-    role: 'checker',
-    email: 'checker@remitx.dev',
-    password: 'Checker@123',
-    tenant: 'default',
+    label: "Checker",
+    role: "checker",
+    email: "checker@remitx.dev",
+    password: "Checker@123",
+    tenant: "remitx",
     color: colors.warning,
   },
   {
-    label: 'Viewer',
-    role: 'viewer',
-    email: 'viewer@remitx.dev',
-    password: 'Viewer@123',
-    tenant: 'default',
+    label: "Viewer",
+    role: "viewer",
+    email: "viewer@remitx.dev",
+    password: "Viewer@123",
+    tenant: "remitx",
     color: colors.info,
   },
-]
+];
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Login({ navigation }: Props) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [tenantSlug, setTenantSlug] = useState(DEFAULT_TENANT)
-  const [showTenant, setShowTenant] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [activeDevUser, setActiveDevUser] = useState<string | null>(null)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [tenantSlug, setTenantSlug] = useState(DEFAULT_TENANT);
+  const [showTenant, setShowTenant] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activeDevUser, setActiveDevUser] = useState<string | null>(null);
 
-  const setAuth = useAuthStore((s) => s.setAuth)
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const applyDevUser = (u: DevUser) => {
-    setEmail(u.email)
-    setPassword(u.password)
-    setTenantSlug(u.tenant)
-    setActiveDevUser(u.role)
-  }
+    setEmail(u.email);
+    setPassword(u.password);
+    setTenantSlug(u.tenant);
+    setActiveDevUser(u.role);
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Missing fields', 'Please enter your email and password.')
-      return
+      Alert.alert("Missing fields", "Please enter your email and password.");
+      return;
     }
-    setLoading(true)
+    setLoading(true);
     try {
-      const { data: res } = await authApi.login({ email: email.trim(), password }, tenantSlug)
-      const payload = res.data
+      const { data: res } = await authApi.login({ email: email.trim(), password }, tenantSlug);
+      const payload = res.data;
 
       if (payload.mfaRequired && payload.mfaChallengeToken) {
-        navigation.navigate('MfaChallenge', {
+        navigation.navigate("MfaChallenge", {
           challengeToken: payload.mfaChallengeToken,
           tenantSlug,
-        })
-        return
+        });
+        return;
       }
 
-      setAuth(payload.user, payload.accessToken, payload.refreshToken, tenantSlug)
+      setAuth(payload.user, payload.accessToken, payload.refreshToken, tenantSlug);
     } catch (err: unknown) {
       const msg =
-        (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error
-          ?.message ?? 'Invalid credentials. Please try again.'
-      Alert.alert('Login failed', msg)
+        (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ??
+        "Invalid credentials. Please try again.";
+      Alert.alert("Login failed", msg);
+      console.log
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
@@ -165,18 +163,9 @@ export function Login({ navigation }: Props) {
             />
 
             {/* Tenant slug toggle */}
-            <TouchableOpacity
-              style={styles.tenantToggle}
-              onPress={() => setShowTenant((v) => !v)}
-            >
-              <Ionicons
-                name={showTenant ? 'chevron-up' : 'chevron-down'}
-                size={14}
-                color={colors.textMuted}
-              />
-              <Text style={styles.tenantToggleLabel}>
-                {showTenant ? 'Hide' : 'Show'} workspace
-              </Text>
+            <TouchableOpacity style={styles.tenantToggle} onPress={() => setShowTenant((v) => !v)}>
+              <Ionicons name={showTenant ? "chevron-up" : "chevron-down"} size={14} color={colors.textMuted} />
+              <Text style={styles.tenantToggleLabel}>{showTenant ? "Hide" : "Show"} workspace</Text>
             </TouchableOpacity>
 
             {showTenant && (
@@ -190,12 +179,7 @@ export function Login({ navigation }: Props) {
               />
             )}
 
-            <Button
-              label="Sign in"
-              onPress={handleLogin}
-              loading={loading}
-              style={styles.loginBtn}
-            />
+            <Button label="Sign in" onPress={handleLogin} loading={loading} style={styles.loginBtn} />
           </View>
 
           {/* Footer */}
@@ -216,26 +200,18 @@ export function Login({ navigation }: Props) {
               </View>
               <View style={styles.devGrid}>
                 {DEV_USERS.map((u) => {
-                  const active = activeDevUser === u.role
+                  const active = activeDevUser === u.role;
                   return (
                     <TouchableOpacity
                       key={u.role}
-                      style={[
-                        styles.devChip,
-                        { borderColor: u.color },
-                        active && { backgroundColor: u.color },
-                      ]}
+                      style={[styles.devChip, { borderColor: u.color }, active && { backgroundColor: u.color }]}
                       onPress={() => applyDevUser(u)}
                       activeOpacity={0.75}
                     >
-                      <Text style={[styles.devChipText, active && styles.devChipTextActive]}>
-                        {u.label}
-                      </Text>
-                      <Text style={[styles.devChipEmail, active && styles.devChipEmailActive]}>
-                        {u.email}
-                      </Text>
+                      <Text style={[styles.devChipText, active && styles.devChipTextActive]}>{u.label}</Text>
+                      <Text style={[styles.devChipEmail, active && styles.devChipEmailActive]}>{u.email}</Text>
                     </TouchableOpacity>
-                  )
+                  );
                 })}
               </View>
             </View>
@@ -243,7 +219,7 @@ export function Login({ navigation }: Props) {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -252,35 +228,35 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing['2xl'],
-    paddingBottom: spacing['3xl'],
+    paddingTop: spacing["2xl"],
+    paddingBottom: spacing["3xl"],
   },
 
   brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing['2xl'],
+    marginBottom: spacing["2xl"],
   },
   logoBox: {
     width: 44,
     height: 44,
     borderRadius: radius.md,
     backgroundColor: colors.primaryFaded,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   brand: {
-    fontSize: fontSize['2xl'],
-    fontWeight: '800',
+    fontSize: fontSize["2xl"],
+    fontWeight: "800",
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
 
-  headingBlock: { marginBottom: spacing['2xl'], gap: spacing.xs },
+  headingBlock: { marginBottom: spacing["2xl"], gap: spacing.xs },
   heading: {
-    fontSize: fontSize['3xl'],
-    fontWeight: '700',
+    fontSize: fontSize["3xl"],
+    fontWeight: "700",
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
@@ -297,25 +273,25 @@ const styles = StyleSheet.create({
   },
 
   tenantToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingVertical: spacing.xs,
   },
   tenantToggleLabel: { fontSize: fontSize.sm, color: colors.textMuted },
   loginBtn: { marginTop: spacing.xs },
 
   footer: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: fontSize.xs,
     color: colors.textDisabled,
     marginBottom: spacing.xs,
   },
   footerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xs,
   },
   footerBadgeText: { fontSize: fontSize.xs, color: colors.success },
@@ -326,13 +302,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.warning,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     padding: spacing.base,
     gap: spacing.md,
   },
   devHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
   },
   devBadge: {
@@ -343,23 +319,23 @@ const styles = StyleSheet.create({
   },
   devBadgeText: {
     fontSize: fontSize.xs,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.black,
     letterSpacing: 1,
   },
   devTitle: {
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.warning,
   },
   devGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   devChip: {
     flex: 1,
-    minWidth: '45%',
+    minWidth: "45%",
     borderRadius: radius.md,
     borderWidth: 1.5,
     paddingVertical: spacing.sm,
@@ -368,7 +344,7 @@ const styles = StyleSheet.create({
   },
   devChipText: {
     fontSize: fontSize.sm,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.textPrimary,
   },
   devChipTextActive: { color: colors.white },
@@ -376,5 +352,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
   },
-  devChipEmailActive: { color: 'rgba(255,255,255,0.75)' },
-})
+  devChipEmailActive: { color: "rgba(255,255,255,0.75)" },
+});
