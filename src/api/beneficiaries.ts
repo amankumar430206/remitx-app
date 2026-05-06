@@ -18,6 +18,20 @@ export interface Beneficiary {
   created_at: string
 }
 
+export interface BeneficiaryCreatePayload {
+  name: string
+  country_code: string
+  currency: string
+  bank_name?: string
+  account_number?: string
+  routing_number?: string
+  sort_code?: string
+  ifsc_code?: string
+  iban?: string
+  swift_bic?: string
+  purpose_code?: string
+}
+
 const beneficiaries = {
   list: (params?: { page?: number; limit?: number; search?: string }) =>
     apiClient.get<{ success: boolean; data: Beneficiary[]; meta: { page: number; limit: number; total: number } }>(
@@ -26,6 +40,9 @@ const beneficiaries = {
 
   get: (id: string) =>
     apiClient.get<{ success: boolean; data: Beneficiary }>(`/beneficiaries/${id}`),
+
+  create: (payload: BeneficiaryCreatePayload) =>
+    apiClient.post<{ success: boolean; data: Beneficiary }>('/beneficiaries', payload),
 }
 
 export default beneficiaries

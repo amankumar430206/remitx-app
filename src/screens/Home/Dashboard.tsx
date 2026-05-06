@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, RefreshControl, ActivityIndicator,
+  TouchableOpacity, RefreshControl, ActivityIndicator, Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -16,6 +16,10 @@ import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo, statusColor, currencyColor } from '@/utils/format'
 import { StatusBadge } from '@/components/ui/Badge'
 import { type AppTabsParamList } from '@/navigation/AppTabs'
+import { Notifications } from '@/screens/Notifications'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { useQuery } from '@tanstack/react-query'
+import notificationsApi from '@/api/notifications'
 
 type Nav = BottomTabNavigationProp<AppTabsParamList>
 
@@ -37,11 +41,26 @@ export function Dashboard() {
     return acc
   }, {})
 
+  const { isOnline } = useNetworkStatus()
+  const [showNotifs, setShowNotifs] = useState(false)
+
+  const { data: notifData } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => notificationsApi.list({ limit: 50 }).then((r) => r.data.data),
+  })
+  const unreadCount = (notifData ?? []).filter((n) => !n.read_at).length
+
   const firstName = user?.first_name ?? user?.email?.split('@')[0] ?? 'there'
   const roleLabel = user?.role?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ?? ''
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {!isOnline && (
+        <View style={styles.offlineBanner}>
+          <Ionicons name="cloud-offline-outline" size={14} color={colors.white} />
+          <Text style={styles.offlineText}>No internet connection</Text>
+        </View>
+      )}
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={colors.primary} />}
@@ -58,10 +77,22 @@ export function Dashboard() {
               </View>
             )}
           </View>
+          <TouchableOpacity style={styles.bellBtn} onPress={() => setShowNotifs(true)}>
+            <Ionicons name="notifications-outline" size={22} color={colors.textSecondary} />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <View style={styles.avatarBtn}>
             <Text style={styles.avatarText}>{firstName[0]?.toUpperCase()}</Text>
           </View>
         </View>
+
+        <Modal visible={showNotifs} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowNotifs(false)}>
+          <Notifications onClose={() => setShowNotifs(false)} />
+        </Modal>
 
         {/* Balance cards */}
         <Text style={styles.sectionLabel}>Your accounts</Text>
@@ -166,9 +197,17 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingBottom: spacing['3xl'] },
 
+  offlineBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, backgroundColor: colors.danger,
+    paddingVertical: spacing.xs + 2,
+  },
+  offlineText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.white },
+
   greeting: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.lg,
+    gap: spacing.sm,
   },
   greetSub: { fontSize: fontSize.sm, color: colors.textMuted },
   greetName: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.3 },
@@ -178,6 +217,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2,
   },
   roleText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.primaryLight, letterSpacing: 0.4 },
+  bellBtn: { padding: spacing.xs, position: 'relative' },
+  bellBadge: {
+    position: 'absolute', top: 2, right: 2,
+    minWidth: 16, height: 16, borderRadius: 8,
+    backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: { fontSize: 9, fontWeight: '800', color: colors.white },
   avatarBtn: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center',

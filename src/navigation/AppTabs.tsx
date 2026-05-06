@@ -7,7 +7,7 @@ import { Dashboard } from '@/screens/Home/Dashboard'
 import { PaymentHistory } from '@/screens/Payments/PaymentHistory'
 import { ApprovalQueue } from '@/screens/Approve/ApprovalQueue'
 import { AccountList } from '@/screens/Accounts/AccountList'
-import { PlaceholderScreen } from '@/screens/placeholders/PlaceholderScreen'
+import { SettingsStack } from '@/navigation/SettingsStack'
 import { colors } from '@/theme/colors'
 import { fontSize } from '@/theme/spacing'
 
@@ -33,8 +33,6 @@ const tabIcons: Record<keyof AppTabsParamList, TabIcon> = {
   Accounts: { active: 'wallet', inactive: 'wallet-outline' },
   Settings: { active: 'settings', inactive: 'settings-outline' },
 }
-
-function SettingsScreen() { return <PlaceholderScreen name="Settings" /> }
 
 export function AppTabs() {
   const insets = useSafeAreaInsets()
@@ -68,7 +66,7 @@ export function AppTabs() {
       <Tab.Screen name="Payments" component={PaymentHistory} />
       <Tab.Screen name="Approve" component={ApprovalQueue} />
       <Tab.Screen name="Accounts" component={AccountList} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Settings" component={SettingsStack} />
     </Tab.Navigator>
   )
 }

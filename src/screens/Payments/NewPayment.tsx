@@ -12,6 +12,7 @@ import paymentsApi from '@/api/payments'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius } from '@/theme/spacing'
 import { formatMoney, generateIdempotencyKey } from '@/utils/format'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
@@ -24,6 +25,7 @@ interface Props { onClose: () => void }
 const PURPOSE_CODES = ['TRADE', 'SALARY', 'FAMILY', 'INVEST', 'TRAVEL', 'OTHER']
 
 export function NewPayment({ onClose }: Props) {
+  const { isOnline } = useNetworkStatus()
   const [step, setStep] = useState<Step>('beneficiary')
   const [selectedBene, setSelectedBene] = useState<Beneficiary | null>(null)
   const [amount, setAmount] = useState('')
@@ -170,11 +172,20 @@ export function NewPayment({ onClose }: Props) {
             leftIcon="document-text-outline"
           />
 
+          {!isOnline && (
+            <View style={styles.offlineBanner}>
+              <Ionicons name="cloud-offline-outline" size={14} color={colors.white} />
+              <Text style={styles.offlineText}>No internet — payment cannot be initiated</Text>
+            </View>
+          )}
           <Button
             label="Get FX Quote"
-            onPress={() => quoteMutation.mutate()}
+            onPress={() => {
+              if (!isOnline) { Alert.alert('Offline', 'Please check your connection and try again.'); return }
+              quoteMutation.mutate()
+            }}
             loading={quoteMutation.isPending}
-            disabled={!amount || parseFloat(amount) <= 0}
+            disabled={!amount || parseFloat(amount) <= 0 || !isOnline}
             style={styles.actionBtn}
           />
         </ScrollView>
@@ -312,6 +323,12 @@ const styles = StyleSheet.create({
   reviewValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flex: 1, marginLeft: spacing.md },
 
   actionBtn: { marginTop: spacing.sm },
+  offlineBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: colors.danger, borderRadius: radius.md,
+    padding: spacing.sm,
+  },
+  offlineText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.white, flex: 1 },
   cancelBtn: { marginTop: spacing.xs },
 
   doneContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.base },

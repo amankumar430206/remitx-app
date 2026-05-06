@@ -22,7 +22,11 @@ const linking = {
   config: {
     screens: {
       Approve: 'payments/:id/approve',
-      KYC: 'kyc',
+      Settings: {
+        screens: {
+          KycStatus: 'kyc',
+        },
+      },
     },
   },
 }
