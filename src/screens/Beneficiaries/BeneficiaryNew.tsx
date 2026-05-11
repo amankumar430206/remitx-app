@@ -17,6 +17,11 @@ import { type SettingsStackParamList } from '@/navigation/SettingsStack'
 
 type Nav = NativeStackNavigationProp<SettingsStackParamList>
 
+interface Props {
+  /** When provided, used instead of nav.goBack() — allows use outside SettingsStack */
+  onClose?: () => void
+}
+
 const COUNTRIES = [
   { code: 'US', name: 'United States', currency: 'USD', routing: 'routing_number', routingLabel: 'Routing number' },
   { code: 'GB', name: 'United Kingdom', currency: 'GBP', routing: 'sort_code', routingLabel: 'Sort code' },
@@ -30,9 +35,14 @@ const COUNTRIES = [
 
 const PURPOSE_CODES = ['SALARY', 'FAMILY', 'TRADE', 'SERVICES', 'CONSULTING', 'INVESTMENT', 'EDUCATION', 'OTHER']
 
-export function BeneficiaryNew() {
+export function BeneficiaryNew({ onClose }: Props = {}) {
   const nav = useNavigation<Nav>()
   const qc = useQueryClient()
+
+  const dismiss = () => {
+    if (onClose) onClose()
+    else nav.goBack()
+  }
 
   const [name, setName] = useState('')
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0])
@@ -61,7 +71,7 @@ export function BeneficiaryNew() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['beneficiaries'] })
       Alert.alert('Beneficiary added', `${name} has been saved.`, [
-        { text: 'OK', onPress: () => nav.goBack() },
+        { text: 'OK', onPress: dismiss },
       ])
     },
     onError: () => Alert.alert('Error', 'Could not add beneficiary. Please check your details.'),
@@ -72,7 +82,7 @@ export function BeneficiaryNew() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => nav.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={dismiss} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Add Beneficiary</Text>

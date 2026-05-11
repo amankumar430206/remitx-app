@@ -137,7 +137,13 @@ export function PaymentHistory() {
         stickySectionHeadersEnabled={false}
         ListEmptyComponent={
           !isLoading ? (
-            <EmptyState icon="swap-horizontal-outline" title="No payments yet" subtitle="Tap New payment to send your first transfer" />
+            <EmptyState
+              icon="swap-horizontal-outline"
+              title="No payments yet"
+              subtitle="Send your first international transfer in minutes"
+              actionLabel="New payment"
+              onAction={() => setShowNew(true)}
+            />
           ) : null
         }
       />

@@ -1,22 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert,
+  TextInput, ActivityIndicator, Alert, Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import beneficiariesApi, { type Beneficiary } from '@/api/beneficiaries'
 import fxApi, { type FxQuote } from '@/api/fx'
 import paymentsApi from '@/api/payments'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius } from '@/theme/spacing'
-import { formatMoney, generateIdempotencyKey } from '@/utils/format'
+import { formatMoney, generateIdempotencyKey, currencyColor } from '@/utils/format'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Card } from '@/components/ui/Card'
+import { BeneficiaryNew } from '@/screens/Beneficiaries/BeneficiaryNew'
 
 type Step = 'beneficiary' | 'amount' | 'review' | 'done'
 
@@ -26,6 +28,7 @@ const PURPOSE_CODES = ['TRADE', 'SALARY', 'FAMILY', 'INVEST', 'TRAVEL', 'OTHER']
 
 export function NewPayment({ onClose }: Props) {
   const { isOnline } = useNetworkStatus()
+  const qc = useQueryClient()
   const [step, setStep] = useState<Step>('beneficiary')
   const [selectedBene, setSelectedBene] = useState<Beneficiary | null>(null)
   const [amount, setAmount] = useState('')
@@ -33,6 +36,7 @@ export function NewPayment({ onClose }: Props) {
   const [reference, setReference] = useState('')
   const [quote, setQuote] = useState<FxQuote | null>(null)
   const [countdown, setCountdown] = useState(0)
+  const [showAddBene, setShowAddBene] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const idempotencyKey = useRef(generateIdempotencyKey())
 
@@ -88,36 +92,72 @@ export function NewPayment({ onClose }: Props) {
 
   // ─── Step: Beneficiary ───────────────────────────────────────────────────
   if (step === 'beneficiary') {
+    const activeBenes = (benes ?? []).filter((b) => b.is_active)
+
     return (
       <SafeAreaView style={styles.safe}>
         <ScreenHeader title="New Payment" subtitle="Step 1 of 3 — Select recipient" onBack={onClose} />
         <StepBar current={0} />
+
         {loadingBenes ? (
           <ActivityIndicator color={colors.primary} style={styles.loader} />
+        ) : activeBenes.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <LinearGradient colors={['#6366F115', '#6366F108']} style={styles.emptyIconWrap} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Ionicons name="people-outline" size={36} color={colors.primary + '80'} />
+            </LinearGradient>
+            <Text style={styles.emptyTitle}>No recipients yet</Text>
+            <Text style={styles.emptySubtitle}>Add a beneficiary to start sending payments</Text>
+            <TouchableOpacity
+              style={styles.emptyCtaWrap}
+              onPress={() => setShowAddBene(true)}
+              activeOpacity={0.85}
+            >
+              <LinearGradient colors={['#6366F1', '#4F46E5']} style={styles.emptyCta} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Ionicons name="person-add-outline" size={18} color={colors.white} />
+                <Text style={styles.emptyCtaText}>Add beneficiary</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         ) : (
           <ScrollView contentContainerStyle={styles.scroll}>
-            {(benes ?? []).filter((b) => b.is_active).map((b) => (
-              <TouchableOpacity
-                key={b.id}
-                style={styles.beneRow}
-                onPress={() => { setSelectedBene(b); setStep('amount') }}
-                activeOpacity={0.75}
-              >
-                <View style={styles.beneAvatar}>
-                  <Text style={styles.beneAvatarText}>{b.name[0]}</Text>
-                </View>
-                <View style={styles.beneMeta}>
-                  <Text style={styles.beneName}>{b.name}</Text>
-                  <Text style={styles.beneInfo}>{b.bank_name ?? b.country_code} · {b.currency}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-            ))}
-            {(benes ?? []).length === 0 && (
-              <Text style={styles.emptyText}>No active beneficiaries found.</Text>
-            )}
+            {activeBenes.map((b) => {
+              const cc = currencyColor(b.currency)
+              return (
+                <TouchableOpacity
+                  key={b.id}
+                  style={styles.beneRow}
+                  onPress={() => { setSelectedBene(b); setStep('amount') }}
+                  activeOpacity={0.75}
+                >
+                  <View style={[styles.beneAvatar, { backgroundColor: cc + '22' }]}>
+                    <Text style={[styles.beneAvatarText, { color: cc }]}>{b.name[0]}</Text>
+                  </View>
+                  <View style={styles.beneMeta}>
+                    <Text style={styles.beneName}>{b.name}</Text>
+                    <Text style={styles.beneInfo}>{b.bank_name ?? b.country_code} · {b.currency}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              )
+            })}
+            <TouchableOpacity style={styles.addBeneRow} onPress={() => setShowAddBene(true)} activeOpacity={0.75}>
+              <View style={styles.addBeneIcon}>
+                <Ionicons name="add" size={20} color={colors.primary} />
+              </View>
+              <Text style={styles.addBeneText}>Add new beneficiary</Text>
+            </TouchableOpacity>
           </ScrollView>
         )}
+
+        <Modal visible={showAddBene} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowAddBene(false)}>
+          <BeneficiaryNew
+            onClose={() => {
+              setShowAddBene(false)
+              qc.invalidateQueries({ queryKey: ['beneficiaries'] })
+            }}
+          />
+        </Modal>
       </SafeAreaView>
     )
   }
@@ -292,7 +332,24 @@ const styles = StyleSheet.create({
   beneMeta: { flex: 1 },
   beneName: { fontSize: fontSize.base, fontWeight: '600', color: colors.textPrimary },
   beneInfo: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: 2 },
-  emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: spacing['2xl'] },
+  // Empty state
+  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
+  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
+  emptyTitle: { fontSize: fontSize.lg, fontWeight: '800', color: colors.textPrimary },
+  emptySubtitle: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20, paddingHorizontal: spacing.xl },
+  emptyCtaWrap: { borderRadius: radius.full, overflow: 'hidden', marginTop: spacing.sm },
+  emptyCta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.xl },
+  emptyCtaText: { fontSize: fontSize.base, fontWeight: '700', color: colors.white },
+
+  // Add-another row at bottom of list
+  addBeneRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.primary + '40',
+    borderStyle: 'dashed', padding: spacing.base, marginBottom: spacing.sm,
+    backgroundColor: colors.primaryFaded,
+  },
+  addBeneIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center' },
+  addBeneText: { fontSize: fontSize.base, fontWeight: '600', color: colors.primary },
 
   beneCard: { marginBottom: spacing.xs },
   fieldLabel: { fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing.xs },

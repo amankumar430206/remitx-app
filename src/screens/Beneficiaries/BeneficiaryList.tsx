@@ -103,7 +103,15 @@ export function BeneficiaryList() {
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         ListEmptyComponent={
           !isLoading
-            ? <EmptyState icon="people-outline" title="No beneficiaries" subtitle="Add a recipient to send payments" />
+            ? (
+              <EmptyState
+                icon="people-outline"
+                title="No beneficiaries yet"
+                subtitle="Add a recipient to start sending international payments"
+                actionLabel="Add beneficiary"
+                onAction={() => nav.navigate('BeneficiaryNew')}
+              />
+            )
             : null
         }
       />

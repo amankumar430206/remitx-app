@@ -115,7 +115,11 @@ export function AccountList() {
         contentContainerStyle={styles.scroll}
       >
         {(data ?? []).length === 0 && !isLoading ? (
-          <EmptyState icon="wallet-outline" title="No accounts" subtitle="No accounts found for your profile" />
+          <EmptyState
+            icon="wallet-outline"
+            title="No accounts yet"
+            subtitle="Your accounts will appear here once provisioned by your administrator"
+          />
         ) : (
           (data ?? []).map((acc) => (
             <AccountCard key={acc.id} account={acc} onPress={() => setSelected(acc)} />
