@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -10,6 +10,7 @@ import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import kycApi from '@/api/kyc'
 import { getApiError } from '@/utils/apiError'
+import { useAlert } from '@/hooks/useAlert'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { Button } from '@/components/ui/Button'
@@ -25,6 +26,7 @@ const DOC_LABELS: Record<string, string> = {
 }
 
 export function KycDocumentUpload() {
+  const { showAlert } = useAlert()
   const nav = useNavigation<Nav>()
   const route = useRoute<Route>()
   const { docType } = route.params
@@ -43,11 +45,11 @@ export function KycDocumentUpload() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['kyc-status'] })
-      Alert.alert('Submitted', 'Your document has been submitted for review.', [
+      showAlert('Submitted', 'Your document has been submitted for review.', [
         { text: 'OK', onPress: () => nav.navigate('KycStatus') },
       ])
     },
-    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not submit document. Please try again.')),
+    onError: (err) => showAlert('Error', getApiError(err, 'Could not submit document. Please try again.')),
   })
 
   const capture = async () => {
@@ -56,7 +58,7 @@ export function KycDocumentUpload() {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: false })
       if (photo) setCapturedUri(photo.uri)
     } catch {
-      Alert.alert('Error', 'Could not capture photo.')
+      showAlert('Error', 'Could not capture photo.')
     }
   }
 

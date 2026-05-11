@@ -11,6 +11,7 @@ import { AuthStack } from '@/navigation/AuthStack'
 import { AppTabs } from '@/navigation/AppTabs'
 import { BiometricPrompt } from '@/screens/BiometricPrompt'
 import { NetworkBanner } from '@/components/ui/NetworkBanner'
+import { AlertProvider } from '@/context/AlertContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -78,11 +79,13 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <NavigationContainer linking={linking}>
-            <StatusBar style="light" />
-            {isAuthenticated ? <AppTabs /> : <AuthStack />}
-            <NetworkBanner />
-          </NavigationContainer>
+          <AlertProvider>
+            <NavigationContainer linking={linking}>
+              <StatusBar style="light" />
+              {isAuthenticated ? <AppTabs /> : <AuthStack />}
+              <NetworkBanner />
+            </NavigationContainer>
+          </AlertProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

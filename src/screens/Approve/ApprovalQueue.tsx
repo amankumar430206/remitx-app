@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  RefreshControl, Modal, TextInput, Alert, ActivityIndicator,
+  RefreshControl, Modal, TextInput, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -11,10 +11,12 @@ import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo } from '@/utils/format'
 import { getApiError } from '@/utils/apiError'
+import { useAlert } from '@/hooks/useAlert'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 export function ApprovalQueue() {
+  const { showAlert } = useAlert()
   const qc = useQueryClient()
   const [selected, setSelected] = useState<Payment | null>(null)
   const [comment, setComment] = useState('')
@@ -32,14 +34,14 @@ export function ApprovalQueue() {
 
   const approveMutation = useMutation({
     mutationFn: () => paymentsApi.approve(selected!.id, comment || undefined),
-    onSuccess: () => { invalidate(); closeModal(); Alert.alert('Approved', 'Payment has been approved.') },
-    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not approve this payment.')),
+    onSuccess: () => { invalidate(); closeModal(); showAlert('Approved', 'Payment has been approved.') },
+    onError: (err) => showAlert('Error', getApiError(err, 'Could not approve this payment.')),
   })
 
   const rejectMutation = useMutation({
     mutationFn: () => paymentsApi.reject(selected!.id, comment),
-    onSuccess: () => { invalidate(); closeModal(); Alert.alert('Rejected', 'Payment has been rejected.') },
-    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not reject this payment.')),
+    onSuccess: () => { invalidate(); closeModal(); showAlert('Rejected', 'Payment has been rejected.') },
+    onError: (err) => showAlert('Error', getApiError(err, 'Could not reject this payment.')),
   })
 
   const closeModal = () => { setSelected(null); setComment(''); setAction(null) }

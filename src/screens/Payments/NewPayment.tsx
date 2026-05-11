@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, Modal,
+  TextInput, ActivityIndicator, Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -16,6 +16,7 @@ import { spacing, fontSize, radius } from '@/theme/spacing'
 import { formatMoney, generateIdempotencyKey, currencyColor } from '@/utils/format'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { getApiError } from '@/utils/apiError'
+import { useAlert } from '@/hooks/useAlert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
@@ -29,6 +30,7 @@ interface Props { onClose: () => void }
 const PURPOSE_CODES = ['TRADE', 'SUPPLIER', 'SALARY', 'SERVICES', 'CONTRACTOR', 'OTHER']
 
 export function NewPayment({ onClose }: Props) {
+  const { showAlert } = useAlert()
   const { isOnline } = useNetworkStatus()
   const qc = useQueryClient()
   const [step, setStep] = useState<Step>('beneficiary')
@@ -64,7 +66,7 @@ export function NewPayment({ onClose }: Props) {
       setCountdown(secs)
       setStep('review')
     },
-    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not get FX quote. Please try again.')),
+    onError: (err) => showAlert('Error', getApiError(err, 'Could not get FX quote. Please try again.')),
   })
 
   const submitMutation = useMutation({
@@ -79,7 +81,7 @@ export function NewPayment({ onClose }: Props) {
       }, idempotencyKey.current).then((r) => r.data.data)
     },
     onSuccess: () => setStep('done'),
-    onError: (err) => Alert.alert('Error', getApiError(err, 'Payment submission failed. Please try again.')),
+    onError: (err) => showAlert('Error', getApiError(err, 'Payment submission failed. Please try again.')),
   })
 
   // Countdown timer for FX quote
@@ -89,7 +91,7 @@ export function NewPayment({ onClose }: Props) {
         setCountdown((c) => {
           if (c <= 1) {
             clearInterval(timerRef.current!)
-            Alert.alert('Quote expired', 'The FX rate has expired. Please get a new quote.', [
+            showAlert('Quote expired', 'The FX rate has expired. Please get a new quote.', [
               { text: 'Get new quote', onPress: () => { setStep('amount'); setQuote(null) } },
             ])
             return 0
@@ -226,7 +228,7 @@ export function NewPayment({ onClose }: Props) {
           <Button
             label="Get FX Quote"
             onPress={() => {
-              if (!isOnline) { Alert.alert('Offline', 'Please check your connection and try again.'); return }
+              if (!isOnline) { showAlert('Offline', 'Please check your connection and try again.'); return }
               quoteMutation.mutate()
             }}
             loading={quoteMutation.isPending}
@@ -278,7 +280,7 @@ export function NewPayment({ onClose }: Props) {
             label="Confirm & Send"
             onPress={() => {
               if (!sourceAccount) {
-                Alert.alert('No account', 'You have no active USD account to send from.')
+                showAlert('No account', 'You have no active USD account to send from.')
                 return
               }
               submitMutation.mutate()

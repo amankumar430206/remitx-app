@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert,
+  TouchableOpacity,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -10,6 +10,7 @@ import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import beneficiariesApi from '@/api/beneficiaries'
 import { getApiError } from '@/utils/apiError'
+import { useAlert } from '@/hooks/useAlert'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { Input } from '@/components/ui/Input'
@@ -37,6 +38,7 @@ const COUNTRIES = [
 const PURPOSE_CODES = ['TRADE', 'SUPPLIER', 'SALARY', 'SERVICES', 'CONTRACTOR', 'OTHER']
 
 export function BeneficiaryNew({ onClose }: Props = {}) {
+  const { showAlert } = useAlert()
   const nav = useNavigation<Nav>()
   const qc = useQueryClient()
 
@@ -71,11 +73,11 @@ export function BeneficiaryNew({ onClose }: Props = {}) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['beneficiaries'] })
-      Alert.alert('Beneficiary added', `${name} has been saved.`, [
+      showAlert('Beneficiary added', `${name} has been saved.`, [
         { text: 'OK', onPress: dismiss },
       ])
     },
-    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not add beneficiary. Please check your details.')),
+    onError: (err) => showAlert('Error', getApiError(err, 'Could not add beneficiary. Please check your details.')),
   })
 
   const canSubmit = name.trim().length > 0

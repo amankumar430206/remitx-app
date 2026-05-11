@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  Alert,
+
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +17,8 @@ import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius } from '@/theme/spacing'
 import { useAuthStore } from '@/stores/authStore'
 import authApi from '@/api/auth'
+import { getApiError } from '@/utils/apiError'
+import { useAlert } from '@/hooks/useAlert'
 import { type AuthStackParamList } from '@/navigation/AuthStack'
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'MfaChallenge'>
@@ -24,6 +26,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'MfaChallenge'>
 const CODE_LENGTH = 6
 
 export function MfaChallenge({ route, navigation }: Props) {
+  const { showAlert } = useAlert()
   const { challengeToken, tenantSlug } = route.params
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
@@ -45,8 +48,8 @@ export function MfaChallenge({ route, navigation }: Props) {
       const { data: res } = await authApi.mfaChallenge(challengeToken, finalCode)
       const payload = res.data
       setAuth(payload.user, payload.accessToken, payload.refreshToken, tenantSlug)
-    } catch {
-      Alert.alert('Invalid code', 'The code you entered is incorrect. Please try again.')
+    } catch (err) {
+      showAlert('Invalid code', getApiError(err, 'The code you entered is incorrect. Please try again.'))
       setCode('')
       inputRef.current?.focus()
     } finally {

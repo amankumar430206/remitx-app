@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, Switch,
+  TouchableOpacity, Switch,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -13,6 +13,7 @@ import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { type SettingsStackParamList } from '@/navigation/SettingsStack'
 import Constants from 'expo-constants'
+import { useAlert } from '@/hooks/useAlert'
 
 type Nav = NativeStackNavigationProp<SettingsStackParamList>
 
@@ -55,6 +56,7 @@ function SettingsRow({
 }
 
 export function Profile() {
+  const { showAlert } = useAlert()
   const nav = useNavigation<Nav>()
   const { user, clearAuth } = useAuthStore()
   const [notifEnabled, setNotifEnabled] = useState(true)
@@ -67,7 +69,7 @@ export function Profile() {
   const appVersion = Constants.expoConfig?.version ?? '1.0.0'
 
   const handleLogout = () => {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+    showAlert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: clearAuth },
     ])

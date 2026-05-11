@@ -7,7 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Alert,
+
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -18,6 +18,8 @@ import { colors } from "@/theme/colors";
 import { spacing, fontSize, radius } from "@/theme/spacing";
 import { useAuthStore } from "@/stores/authStore";
 import authApi from "@/api/auth";
+import { getApiError } from '@/utils/apiError'
+import { useAlert } from '@/hooks/useAlert'
 import { type AuthStackParamList } from "@/navigation/AuthStack";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
@@ -71,6 +73,7 @@ const DEV_USERS: DevUser[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Login({ navigation }: Props) {
+  const { showAlert } = useAlert()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tenantSlug, setTenantSlug] = useState(DEFAULT_TENANT);
@@ -89,7 +92,7 @@ export function Login({ navigation }: Props) {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert("Missing fields", "Please enter your email and password.");
+      showAlert("Missing fields", "Please enter your email and password.");
       return;
     }
     setLoading(true);
@@ -107,10 +110,7 @@ export function Login({ navigation }: Props) {
 
       setAuth(payload.user, payload.accessToken, payload.refreshToken, tenantSlug);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ??
-        "Invalid credentials. Please try again.";
-      Alert.alert("Login failed", msg);
+      showAlert("Login failed", getApiError(err, "Invalid credentials. Please try again."));
     } finally {
       setLoading(false);
     }
