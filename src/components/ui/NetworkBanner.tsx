@@ -11,8 +11,9 @@ const PILL_H = 36
 export function NetworkBanner() {
   const { isOnline } = useNetworkStatus()
   const insets = useSafeAreaInsets()
-  // Start fully above the screen — behind the status bar
-  const translateY = useRef(new Animated.Value(-(PILL_H + 16))).current
+  // Hide distance = pill height + its top offset + extra buffer so it clears camera/notch
+  const hideY = -(PILL_H + insets.top + spacing.sm + 8)
+  const translateY = useRef(new Animated.Value(hideY)).current
   const wasOffline = useRef(false)
   const onlineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -28,10 +29,9 @@ export function NetworkBanner() {
         bounciness: 6,
       }).start()
     } else if (wasOffline.current) {
-      // Show "back online" briefly then retract
       onlineTimer.current = setTimeout(() => {
         Animated.timing(translateY, {
-          toValue: -(PILL_H + 16),
+          toValue: hideY,
           duration: 280,
           useNativeDriver: true,
         }).start()
@@ -39,9 +39,8 @@ export function NetworkBanner() {
     }
 
     return () => { if (onlineTimer.current) clearTimeout(onlineTimer.current) }
-  }, [isOnline])
+  }, [isOnline, hideY])
 
-  // top = just below the status bar, pill drops into this spot
   const top = insets.top + spacing.sm
 
   return (
