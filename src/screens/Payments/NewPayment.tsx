@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import beneficiariesApi, { type Beneficiary } from '@/api/beneficiaries'
 import fxApi, { type FxQuote } from '@/api/fx'
 import paymentsApi from '@/api/payments'
+import accountsApi from '@/api/accounts'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius } from '@/theme/spacing'
 import { formatMoney, generateIdempotencyKey, currencyColor } from '@/utils/format'
@@ -24,7 +25,7 @@ type Step = 'beneficiary' | 'amount' | 'review' | 'done'
 
 interface Props { onClose: () => void }
 
-const PURPOSE_CODES = ['TRADE', 'SALARY', 'FAMILY', 'INVEST', 'TRAVEL', 'OTHER']
+const PURPOSE_CODES = ['TRADE', 'SUPPLIER', 'SALARY', 'SERVICES', 'CONTRACTOR', 'OTHER']
 
 export function NewPayment({ onClose }: Props) {
   const { isOnline } = useNetworkStatus()
@@ -33,7 +34,7 @@ export function NewPayment({ onClose }: Props) {
   const [selectedBene, setSelectedBene] = useState<Beneficiary | null>(null)
   const [amount, setAmount] = useState('')
   const [purposeCode, setPurposeCode] = useState('TRADE')
-  const [reference, setReference] = useState('')
+  const [note, setNote] = useState('')
   const [quote, setQuote] = useState<FxQuote | null>(null)
   const [countdown, setCountdown] = useState(0)
   const [showAddBene, setShowAddBene] = useState(false)
@@ -44,6 +45,15 @@ export function NewPayment({ onClose }: Props) {
     queryKey: ['beneficiaries'],
     queryFn: () => beneficiariesApi.list({ limit: 50 }).then((r) => r.data.data),
   })
+
+  const { data: accountsList } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => accountsApi.list().then((r) => r.data.data),
+  })
+
+  // Auto-select the USD source account (quote is always from USD)
+  const sourceAccount = accountsList?.find(a => a.currency === 'USD' && a.status === 'active')
+    ?? accountsList?.[0]
 
   const quoteMutation = useMutation({
     mutationFn: () => fxApi.quote('USD', selectedBene!.currency, amount).then((r) => r.data.data),
@@ -57,16 +67,16 @@ export function NewPayment({ onClose }: Props) {
   })
 
   const submitMutation = useMutation({
-    mutationFn: () =>
-      paymentsApi.submit({
+    mutationFn: () => {
+      if (!sourceAccount) return Promise.reject(new Error('No source account found'))
+      return paymentsApi.submit({
         beneficiaryId: selectedBene!.id,
+        accountId: sourceAccount.id,
         quoteId: quote!.quoteId,
-        sourceAmount: amount,
-        sourceCurrency: 'USD',
-        destinationCurrency: selectedBene!.currency,
         purposeCode,
-        reference: reference || undefined,
-      }, idempotencyKey.current).then((r) => r.data.data),
+        note: note || undefined,
+      }, idempotencyKey.current).then((r) => r.data.data)
+    },
     onSuccess: () => setStep('done'),
     onError: () => Alert.alert('Error', 'Payment submission failed. Please try again.'),
   })
@@ -205,9 +215,9 @@ export function NewPayment({ onClose }: Props) {
           </View>
 
           <Input
-            label="Reference (optional)"
-            value={reference}
-            onChangeText={setReference}
+            label="Note (optional)"
+            value={note}
+            onChangeText={setNote}
             placeholder="Invoice #, note..."
             leftIcon="document-text-outline"
           />
@@ -254,7 +264,7 @@ export function NewPayment({ onClose }: Props) {
               { label: 'They receive', value: formatMoney(quote.toAmount, quote.to) },
               { label: 'Exchange rate', value: `1 USD = ${parseFloat(quote.rate).toFixed(4)} ${quote.to}` },
               { label: 'Purpose', value: purposeCode },
-              ...(reference ? [{ label: 'Reference', value: reference }] : []),
+              ...(note ? [{ label: 'Note', value: note }] : []),
             ].map(({ label, value }) => (
               <View key={label} style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>{label}</Text>
@@ -265,7 +275,13 @@ export function NewPayment({ onClose }: Props) {
 
           <Button
             label="Confirm & Send"
-            onPress={() => submitMutation.mutate()}
+            onPress={() => {
+              if (!sourceAccount) {
+                Alert.alert('No account', 'You have no active USD account to send from.')
+                return
+              }
+              submitMutation.mutate()
+            }}
             loading={submitMutation.isPending}
             style={styles.actionBtn}
           />
