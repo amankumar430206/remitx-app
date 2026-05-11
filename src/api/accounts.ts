@@ -36,6 +36,11 @@ const accounts = {
 
   ledger: (id: string, params?: { page?: number; limit?: number }) =>
     apiClient.get<PaginatedResponse<LedgerEntry>>(`/accounts/${id}/ledger`, { params }),
+
+  adjust: (id: string, payload: { type: 'credit' | 'debit'; amount: string; description: string }) =>
+    apiClient.post<{ success: boolean; data: { accountId: string; type: string; amount: string; balanceAfter: string } }>(
+      `/accounts/${id}/adjust`, payload
+    ),
 }
 
 export default accounts
