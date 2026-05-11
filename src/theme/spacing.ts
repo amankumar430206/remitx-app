@@ -1,5 +1,3 @@
-export const screenPadding = 20;
-
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -30,3 +28,5 @@ export const fontSize = {
   "2xl": 26,
   "3xl": 32,
 } as const;
+
+export const screenPadding = spacing.md;

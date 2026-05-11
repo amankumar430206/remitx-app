@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, FlatList,
-  TouchableOpacity, RefreshControl, Modal,
+  TouchableOpacity, RefreshControl, Modal, SectionList,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useQuery } from '@tanstack/react-query'
 import paymentsApi, { type Payment } from '@/api/payments'
 import { colors } from '@/theme/colors'
@@ -15,6 +16,55 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { PaymentDetail } from './PaymentDetail'
 import { NewPayment } from './NewPayment'
 
+type Section = { title: string; data: Payment[] }
+
+function groupByDate(payments: Payment[]): Section[] {
+  const map = new Map<string, Payment[]>()
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+
+  for (const p of payments) {
+    const d = new Date(p.created_at)
+    let key: string
+    if (d.toDateString() === today.toDateString()) key = 'Today'
+    else if (d.toDateString() === yesterday.toDateString()) key = 'Yesterday'
+    else key = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(p)
+  }
+
+  return Array.from(map.entries()).map(([title, data]) => ({ title, data }))
+}
+
+function PaymentRow({ item, onPress }: { item: Payment; onPress: () => void }) {
+  const sc = statusColor(item.status)
+
+  return (
+    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
+      <View style={[styles.rowIcon, { backgroundColor: sc + '18' }]}>
+        <Ionicons name="swap-horizontal" size={19} color={sc} />
+      </View>
+      <View style={styles.rowMeta}>
+        <Text style={styles.rowBene} numberOfLines={1}>{item.beneficiary_name ?? 'Beneficiary'}</Text>
+        <View style={styles.rowRouteRow}>
+          <Text style={styles.rowRoute}>{item.source_currency}</Text>
+          <Ionicons name="arrow-forward" size={10} color={colors.textDisabled} />
+          <Text style={styles.rowRoute}>{item.dest_currency}</Text>
+          <Text style={styles.rowDot}>·</Text>
+          <Text style={styles.rowTime}>{formatTimeAgo(item.created_at)}</Text>
+        </View>
+      </View>
+      <View style={styles.rowRight}>
+        <Text style={styles.rowAmt}>{formatMoney(item.source_amount, item.source_currency)}</Text>
+        <Text style={styles.rowDestAmt}>{formatMoney(item.dest_amount, item.dest_currency)}</Text>
+        <StatusBadge status={item.status} size="sm" />
+      </View>
+    </TouchableOpacity>
+  )
+}
+
 export function PaymentHistory() {
   const [selected, setSelected] = useState<Payment | null>(null)
   const [showNew, setShowNew] = useState(false)
@@ -24,56 +74,78 @@ export function PaymentHistory() {
     queryFn: () => paymentsApi.list({ limit: 50 }).then((r) => r.data.data),
   })
 
-  const renderItem = ({ item }: { item: Payment }) => (
-    <TouchableOpacity style={styles.row} onPress={() => setSelected(item)} activeOpacity={0.75}>
-      <View style={[styles.icon, { backgroundColor: statusColor(item.status) + '22' }]}>
-        <Ionicons name="swap-horizontal" size={20} color={statusColor(item.status)} />
-      </View>
-      <View style={styles.meta}>
-        <Text style={styles.bene} numberOfLines={1}>{item.beneficiary_name ?? 'Beneficiary'}</Text>
-        <Text style={styles.time}>
-          {item.source_currency} → {item.dest_currency} · {formatTimeAgo(item.created_at)}
-        </Text>
-      </View>
-      <View style={styles.right}>
-        <Text style={styles.amount}>{formatMoney(item.source_amount, item.source_currency)}</Text>
-        <Text style={styles.destAmount}>{formatMoney(item.dest_amount, item.dest_currency)}</Text>
-        <StatusBadge status={item.status} size="sm" />
-      </View>
-    </TouchableOpacity>
-  )
+  const sections = useMemo(() => groupByDate(data ?? []), [data])
+
+  const totalVol = useMemo(() => {
+    return (data ?? []).reduce((s, p) => s + parseFloat(p.source_amount ?? '0'), 0)
+  }, [data])
+
+  const completedCount = (data ?? []).filter((p) => p.status === 'completed').length
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Payments</Text>
-        <TouchableOpacity style={styles.newBtn} onPress={() => setShowNew(true)}>
-          <Ionicons name="add" size={20} color={colors.white} />
-          <Text style={styles.newBtnText}>New</Text>
+        <View>
+          <Text style={styles.title}>Payments</Text>
+          {data && data.length > 0 && (
+            <Text style={styles.subtitle}>{data.length} transaction{data.length !== 1 ? 's' : ''}</Text>
+          )}
+        </View>
+        <TouchableOpacity style={styles.newBtn} onPress={() => setShowNew(true)} activeOpacity={0.85}>
+          <LinearGradient colors={['#6366F1', '#818CF8']} style={styles.newBtnGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <Ionicons name="add" size={18} color={colors.white} />
+            <Text style={styles.newBtnText}>New payment</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={data ?? []}
+      {/* Stats strip */}
+      {data && data.length > 0 && (
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{data.length}</Text>
+            <Text style={styles.statLabel}>Total</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{completedCount}</Text>
+            <Text style={styles.statLabel}>Completed</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: colors.primary }]}>${Math.floor(totalVol).toLocaleString()}</Text>
+            <Text style={styles.statLabel}>Volume (USD)</Text>
+          </View>
+        </View>
+      )}
+
+      <SectionList
+        sections={sections}
         keyExtractor={(i) => i.id}
-        renderItem={renderItem}
+        renderItem={({ item }) => (
+          <PaymentRow item={item} onPress={() => setSelected(item)} />
+        )}
+        renderSectionHeader={({ section }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>{section.title}</Text>
+            <View style={styles.sectionLine} />
+          </View>
+        )}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
         contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        stickySectionHeadersEnabled={false}
         ListEmptyComponent={
           !isLoading ? (
-            <EmptyState icon="swap-horizontal-outline" title="No payments yet" subtitle="Tap New to send your first payment" />
+            <EmptyState icon="swap-horizontal-outline" title="No payments yet" subtitle="Tap New payment to send your first transfer" />
           ) : null
         }
       />
 
-      {/* Payment detail modal */}
       <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelected(null)}>
         {selected && <PaymentDetail payment={selected} onClose={() => setSelected(null)} />}
       </Modal>
 
-      {/* New payment modal */}
       <Modal visible={showNew} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowNew(false)}>
         <NewPayment onClose={() => setShowNew(false)} />
       </Modal>
@@ -83,30 +155,59 @@ export function PaymentHistory() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: screenPadding, paddingVertical: spacing.base,
+    paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.md,
   },
   title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
-  newBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.primary, borderRadius: radius.full,
-    paddingVertical: spacing.xs + 2, paddingHorizontal: spacing.md,
+  subtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  newBtn: { borderRadius: radius.full, overflow: 'hidden' },
+  newBtnGrad: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.base,
+    borderRadius: radius.full,
   },
   newBtnText: { fontSize: fontSize.sm, fontWeight: '700', color: colors.white },
 
+  statsRow: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: screenPadding, marginBottom: spacing.base,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    paddingVertical: spacing.md,
+  },
+  statCard: { flex: 1, alignItems: 'center' },
+  statValue: { fontSize: fontSize.lg, fontWeight: '800', color: colors.textPrimary },
+  statLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  statDivider: { width: 1, height: 32, backgroundColor: colors.border },
+
   list: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
-  sep: { height: spacing.xs },
+
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingTop: spacing.lg, paddingBottom: spacing.sm,
+  },
+  sectionLabel: { fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.5, textTransform: 'uppercase' },
+  sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
+
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.card, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, padding: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.xs,
   },
-  icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  meta: { flex: 1, gap: 2 },
-  bene: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
-  time: { fontSize: fontSize.xs, color: colors.textMuted },
-  right: { alignItems: 'flex-end', gap: 3 },
-  amount: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
-  destAmount: { fontSize: fontSize.xs, color: colors.textMuted },
+  rowIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  rowMeta: { flex: 1, gap: 4 },
+  rowBene: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
+  rowRouteRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  rowRoute: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '500' },
+  rowDot: { color: colors.textDisabled },
+  rowTime: { fontSize: fontSize.xs, color: colors.textMuted },
+  rowRight: { alignItems: 'flex-end', gap: 3, flexShrink: 0 },
+  rowAmt: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
+  rowDestAmt: { fontSize: fontSize.xs, color: colors.textMuted },
 })

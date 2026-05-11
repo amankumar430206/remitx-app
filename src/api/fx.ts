@@ -10,9 +10,20 @@ export interface FxQuote {
   expiresAt: string
 }
 
+export interface FxRate {
+  from: string
+  to: string
+  clientRate: string
+  midRate: string
+}
+
 const fx = {
+  getRates: () =>
+    apiClient.get<{ success: boolean; data: FxRate[] }>('/fx/rates'),
   quote: (from: string, to: string, fromAmount: string) =>
     apiClient.post<{ success: boolean; data: FxQuote }>('/fx/quote', { from, to, fromAmount }),
+  getQuote: (id: string) =>
+    apiClient.get<{ success: boolean; data: FxQuote }>(`/fx/quote/${id}`),
 }
 
 export default fx

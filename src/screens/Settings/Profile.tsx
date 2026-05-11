@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useNavigation } from '@react-navigation/native'
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useAuthStore } from '@/stores/authStore'
@@ -22,13 +23,44 @@ const KYC_STATUS_CONFIG: Record<string, { label: string; color: string; icon: ke
   pending:   { label: 'Not Started', color: colors.textMuted, icon: 'ellipse-outline' },
 }
 
+function SettingsRow({
+  icon, iconBg, label, subtitle, onPress, right, isLast = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap
+  iconBg: string
+  iconColor?: string
+  label: string
+  subtitle?: string
+  onPress?: () => void
+  right?: React.ReactNode
+  isLast?: boolean
+}) {
+  const content = (
+    <View style={[rows.row, isLast && rows.rowLast]}>
+      <View style={[rows.iconWrap, { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={19} color={colors.white + 'cc'} />
+      </View>
+      <View style={rows.body}>
+        <Text style={rows.label}>{label}</Text>
+        {!!subtitle && <Text style={rows.sub}>{subtitle}</Text>}
+      </View>
+      {right ?? (onPress && <Ionicons name="chevron-forward" size={15} color={colors.textDisabled} />)}
+    </View>
+  )
+
+  if (onPress) {
+    return <TouchableOpacity onPress={onPress} activeOpacity={0.7}>{content}</TouchableOpacity>
+  }
+  return content
+}
+
 export function Profile() {
   const nav = useNavigation<Nav>()
   const { user, clearAuth } = useAuthStore()
   const [notifEnabled, setNotifEnabled] = useState(true)
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'User'
-  const initials = (user?.first_name?.[0] ?? '') + (user?.last_name?.[0] ?? user?.email?.[0] ?? '')
+  const initials = ((user?.first_name?.[0] ?? '') + (user?.last_name?.[0] ?? user?.email?.[0] ?? '')).toUpperCase() || 'U'
   const roleLabel = user?.role?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ?? ''
   const kycStatus = user?.kyc_status ?? 'pending'
   const kyc = KYC_STATUS_CONFIG[kycStatus] ?? KYC_STATUS_CONFIG.pending
@@ -48,121 +80,161 @@ export function Profile() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        {/* Avatar + Identity */}
-        <View style={styles.identity}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials.toUpperCase() || '?'}</Text>
-          </View>
-          <View style={styles.identityInfo}>
-            <Text style={styles.name}>{fullName}</Text>
-            <Text style={styles.email}>{user?.email}</Text>
-            <View style={styles.rolePill}>
-              <Text style={styles.roleText}>{roleLabel}</Text>
+
+        {/* Identity hero */}
+        <LinearGradient colors={['#1a1040', '#0f1a3a']} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <View style={styles.heroCircle} />
+          <View style={styles.heroRow}>
+            <LinearGradient colors={['#6366F1', '#818CF8']} style={styles.avatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </LinearGradient>
+            <View style={styles.heroInfo}>
+              <Text style={styles.heroName} numberOfLines={1}>{fullName}</Text>
+              <Text style={styles.heroEmail} numberOfLines={1}>{user?.email}</Text>
+              {!!roleLabel && (
+                <View style={styles.rolePill}>
+                  <Text style={styles.roleText}>{roleLabel}</Text>
+                </View>
+              )}
             </View>
           </View>
-        </View>
 
-        {/* KYC */}
+          <View style={styles.kycBanner}>
+            <View style={[styles.kycDot, { backgroundColor: kyc.color }]} />
+            <Text style={styles.kycLabel}>KYC Status:</Text>
+            <Text style={[styles.kycValue, { color: kyc.color }]}>{kyc.label}</Text>
+          </View>
+        </LinearGradient>
+
+        {/* Compliance */}
         <Text style={styles.sectionLabel}>Compliance</Text>
         <View style={styles.group}>
-          <TouchableOpacity style={styles.row} onPress={() => nav.navigate('KycStatus')}>
-            <View style={[styles.rowIcon, { backgroundColor: kyc.color + '22' }]}>
-              <Ionicons name={kyc.icon} size={20} color={kyc.color} />
-            </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowLabel}>KYC Verification</Text>
-              <Text style={[styles.rowSub, { color: kyc.color }]}>{kyc.label}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
+          <SettingsRow
+            icon="shield-checkmark-outline"
+            iconBg={kyc.color + '30'}
+            label="KYC Verification"
+            subtitle={kyc.label}
+            onPress={() => nav.navigate('KycStatus')}
+          />
         </View>
 
         {/* Payments */}
         <Text style={styles.sectionLabel}>Payments</Text>
         <View style={styles.group}>
-          <TouchableOpacity style={styles.row} onPress={() => nav.navigate('BeneficiaryList')}>
-            <View style={[styles.rowIcon, { backgroundColor: colors.primaryFaded }]}>
-              <Ionicons name="people-outline" size={20} color={colors.primary} />
-            </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowLabel}>Beneficiaries</Text>
-              <Text style={styles.rowSub}>Manage saved recipients</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
+          <SettingsRow
+            icon="people-outline"
+            iconBg={colors.primary + '30'}
+            label="Beneficiaries"
+            subtitle="Manage saved recipients"
+            onPress={() => nav.navigate('BeneficiaryList')}
+            isLast
+          />
         </View>
 
         {/* Preferences */}
         <Text style={styles.sectionLabel}>Preferences</Text>
         <View style={styles.group}>
-          <View style={[styles.row, styles.rowLast]}>
-            <View style={[styles.rowIcon, { backgroundColor: colors.infoFaded }]}>
-              <Ionicons name="notifications-outline" size={20} color={colors.info} />
-            </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowLabel}>Push notifications</Text>
-              <Text style={styles.rowSub}>Payment alerts and updates</Text>
-            </View>
-            <Switch
-              value={notifEnabled}
-              onValueChange={setNotifEnabled}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.white}
-            />
-          </View>
+          <SettingsRow
+            icon="notifications-outline"
+            iconBg={colors.info + '30'}
+            label="Push notifications"
+            subtitle="Payment alerts and updates"
+            isLast
+            right={
+              <Switch
+                value={notifEnabled}
+                onValueChange={setNotifEnabled}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.white}
+                ios_backgroundColor={colors.border}
+              />
+            }
+          />
+        </View>
+
+        {/* Security */}
+        <Text style={styles.sectionLabel}>Security</Text>
+        <View style={styles.group}>
+          <SettingsRow icon="finger-print-outline" iconBg={colors.success + '25'} label="Biometric lock" subtitle="Enabled on resume" isLast />
         </View>
 
         {/* About */}
         <Text style={styles.sectionLabel}>About</Text>
         <View style={styles.group}>
-          <View style={[styles.row, styles.rowLast]}>
-            <View style={[styles.rowIcon, { backgroundColor: colors.surface }]}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
-            </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowLabel}>App version</Text>
-            </View>
-            <Text style={styles.rowValue}>v{appVersion}</Text>
-          </View>
+          <SettingsRow
+            icon="information-circle-outline"
+            iconBg={colors.surface}
+            label="App version"
+            isLast
+            right={<Text style={styles.version}>v{appVersion}</Text>}
+          />
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-          <Text style={styles.logoutText}>Sign out</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
+          <LinearGradient colors={['#EF444420', '#EF444408']} style={styles.logoutGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+            <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+            <Text style={styles.logoutText}>Sign out</Text>
+          </LinearGradient>
         </TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   )
 }
 
+const rows = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    padding: spacing.base, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  rowLast: { borderBottomWidth: 0 },
+  iconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  body: { flex: 1, gap: 2 },
+  label: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
+  sub: { fontSize: fontSize.xs, color: colors.textMuted },
+})
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: screenPadding, paddingVertical: spacing.base },
+  header: { paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.sm },
   title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
   scroll: { paddingBottom: spacing['3xl'] },
 
-  identity: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.base,
-    marginHorizontal: screenPadding, marginBottom: spacing.xl,
-    backgroundColor: colors.card, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, padding: spacing.base,
+  // Hero
+  hero: {
+    marginHorizontal: screenPadding, marginBottom: spacing.lg,
+    borderRadius: radius.xl, padding: spacing.lg,
+    overflow: 'hidden',
+    borderWidth: 1, borderColor: '#ffffff0a',
   },
-  avatar: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: colors.primary + '55',
+  heroCircle: {
+    position: 'absolute', width: 150, height: 150, borderRadius: 75,
+    backgroundColor: '#6366F110', top: -40, right: -30,
   },
-  avatarText: { fontSize: fontSize.xl, fontWeight: '800', color: colors.primary },
-  identityInfo: { flex: 1, gap: 3 },
-  name: { fontSize: fontSize.base, fontWeight: '700', color: colors.textPrimary },
-  email: { fontSize: fontSize.sm, color: colors.textMuted },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.base },
+  avatar: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatarText: { fontSize: fontSize.xl, fontWeight: '800', color: colors.white },
+  heroInfo: { flex: 1, gap: 3 },
+  heroName: { fontSize: fontSize.base, fontWeight: '800', color: colors.textPrimary },
+  heroEmail: { fontSize: fontSize.xs, color: colors.textMuted },
   rolePill: {
     alignSelf: 'flex-start', backgroundColor: colors.primaryFaded,
-    borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2, marginTop: 2,
+    borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2,
+    borderWidth: 1, borderColor: colors.primary + '30',
   },
-  roleText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.primaryLight },
+  roleText: { fontSize: 9, fontWeight: '800', color: colors.primaryLight, letterSpacing: 0.8, textTransform: 'uppercase' },
 
+  kycBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: '#ffffff06', borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+  },
+  kycDot: { width: 6, height: 6, borderRadius: 3 },
+  kycLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '500' },
+  kycValue: { fontSize: fontSize.xs, fontWeight: '700' },
+
+  // Section
   sectionLabel: {
     fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted,
     textTransform: 'uppercase', letterSpacing: 0.8,
@@ -172,22 +244,17 @@ const styles = StyleSheet.create({
     marginHorizontal: screenPadding, backgroundColor: colors.card,
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
   },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    padding: spacing.base, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  rowLast: { borderBottomWidth: 0 },
-  rowIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  rowBody: { flex: 1, gap: 2 },
-  rowLabel: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
-  rowSub: { fontSize: fontSize.xs, color: colors.textMuted },
-  rowValue: { fontSize: fontSize.sm, color: colors.textMuted },
+
+  version: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: '500' },
 
   logoutBtn: {
+    marginHorizontal: screenPadding, marginTop: spacing.xl,
+    borderRadius: radius.lg, overflow: 'hidden',
+    borderWidth: 1, borderColor: colors.danger + '30',
+  },
+  logoutGrad: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, marginHorizontal: screenPadding, marginTop: spacing.xl,
-    backgroundColor: colors.dangerFaded, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.danger + '44', padding: spacing.base,
+    gap: spacing.sm, paddingVertical: spacing.base,
   },
   logoutText: { fontSize: fontSize.base, fontWeight: '700', color: colors.danger },
 })
