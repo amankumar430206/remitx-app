@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native'
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import beneficiariesApi from '@/api/beneficiaries'
+import { getApiError } from '@/utils/apiError'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { Input } from '@/components/ui/Input'
@@ -33,7 +34,7 @@ const COUNTRIES = [
   { code: 'CA', name: 'Canada', currency: 'CAD', routing: 'routingNumber', routingLabel: 'Transit number' },
 ]
 
-const PURPOSE_CODES = ['SALARY', 'FAMILY', 'TRADE', 'SERVICES', 'CONSULTING', 'INVESTMENT', 'EDUCATION', 'OTHER']
+const PURPOSE_CODES = ['TRADE', 'SUPPLIER', 'SALARY', 'SERVICES', 'CONTRACTOR', 'OTHER']
 
 export function BeneficiaryNew({ onClose }: Props = {}) {
   const nav = useNavigation<Nav>()
@@ -50,7 +51,7 @@ export function BeneficiaryNew({ onClose }: Props = {}) {
   const [accountNumber, setAccountNumber] = useState('')
   const [routingValue, setRoutingValue] = useState('')
   const [swiftBic, setSwiftBic] = useState('')
-  const [purposeCode, setPurposeCode] = useState('SALARY')
+  const [purposeCode, setPurposeCode] = useState('TRADE')
   const [showCountryPicker, setShowCountryPicker] = useState(false)
   const [showPurposePicker, setShowPurposePicker] = useState(false)
 
@@ -74,7 +75,7 @@ export function BeneficiaryNew({ onClose }: Props = {}) {
         { text: 'OK', onPress: dismiss },
       ])
     },
-    onError: () => Alert.alert('Error', 'Could not add beneficiary. Please check your details.'),
+    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not add beneficiary. Please check your details.')),
   })
 
   const canSubmit = name.trim().length > 0

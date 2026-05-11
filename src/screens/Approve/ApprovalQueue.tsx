@@ -10,6 +10,7 @@ import paymentsApi, { type Payment } from '@/api/payments'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo } from '@/utils/format'
+import { getApiError } from '@/utils/apiError'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -32,13 +33,13 @@ export function ApprovalQueue() {
   const approveMutation = useMutation({
     mutationFn: () => paymentsApi.approve(selected!.id, comment || undefined),
     onSuccess: () => { invalidate(); closeModal(); Alert.alert('Approved', 'Payment has been approved.') },
-    onError: () => Alert.alert('Error', 'Could not approve this payment.'),
+    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not approve this payment.')),
   })
 
   const rejectMutation = useMutation({
     mutationFn: () => paymentsApi.reject(selected!.id, comment),
     onSuccess: () => { invalidate(); closeModal(); Alert.alert('Rejected', 'Payment has been rejected.') },
-    onError: () => Alert.alert('Error', 'Could not reject this payment.'),
+    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not reject this payment.')),
   })
 
   const closeModal = () => { setSelected(null); setComment(''); setAction(null) }

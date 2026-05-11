@@ -15,6 +15,7 @@ import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius } from '@/theme/spacing'
 import { formatMoney, generateIdempotencyKey, currencyColor } from '@/utils/format'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { getApiError } from '@/utils/apiError'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
@@ -63,7 +64,7 @@ export function NewPayment({ onClose }: Props) {
       setCountdown(secs)
       setStep('review')
     },
-    onError: () => Alert.alert('Error', 'Could not get FX quote. Please try again.'),
+    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not get FX quote. Please try again.')),
   })
 
   const submitMutation = useMutation({
@@ -78,7 +79,7 @@ export function NewPayment({ onClose }: Props) {
       }, idempotencyKey.current).then((r) => r.data.data)
     },
     onSuccess: () => setStep('done'),
-    onError: () => Alert.alert('Error', 'Payment submission failed. Please try again.'),
+    onError: (err) => Alert.alert('Error', getApiError(err, 'Payment submission failed. Please try again.')),
   })
 
   // Countdown timer for FX quote

@@ -9,6 +9,7 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import kycApi from '@/api/kyc'
+import { getApiError } from '@/utils/apiError'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { Button } from '@/components/ui/Button'
@@ -46,7 +47,7 @@ export function KycDocumentUpload() {
         { text: 'OK', onPress: () => nav.navigate('KycStatus') },
       ])
     },
-    onError: () => Alert.alert('Error', 'Could not submit document. Please try again.'),
+    onError: (err) => Alert.alert('Error', getApiError(err, 'Could not submit document. Please try again.')),
   })
 
   const capture = async () => {
