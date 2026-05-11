@@ -170,6 +170,23 @@ export function Profile() {
           />
         </View>
 
+        {/* Dev tools */}
+        {__DEV__ && (
+          <>
+            <Text style={styles.sectionLabel}>Developer</Text>
+            <View style={styles.group}>
+              <SettingsRow
+                icon="radio-outline"
+                iconBg="#7C3AED30"
+                label="Network Inspector"
+                subtitle="View all API calls and payloads"
+                onPress={() => nav.navigate('NetworkInspector')}
+                isLast
+              />
+            </View>
+          </>
+        )}
+
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
           <LinearGradient colors={['#EF444420', '#EF444408']} style={styles.logoutGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>

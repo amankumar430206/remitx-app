@@ -6,6 +6,7 @@ import { KycStatus } from '@/screens/Kyc/KycStatus'
 import { KycDocumentUpload } from '@/screens/Kyc/KycDocumentUpload'
 import { BeneficiaryList } from '@/screens/Beneficiaries/BeneficiaryList'
 import { BeneficiaryNew } from '@/screens/Beneficiaries/BeneficiaryNew'
+import { NetworkInspector } from '@/screens/Dev/NetworkInspector'
 
 export type SettingsStackParamList = {
   Profile: undefined
@@ -13,6 +14,7 @@ export type SettingsStackParamList = {
   KycDocumentUpload: { docType: string }
   BeneficiaryList: undefined
   BeneficiaryNew: undefined
+  NetworkInspector: undefined
 }
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>()
@@ -31,6 +33,7 @@ export function SettingsStack() {
       <Stack.Screen name="KycDocumentUpload" component={KycDocumentUpload} />
       <Stack.Screen name="BeneficiaryList" component={BeneficiaryList} />
       <Stack.Screen name="BeneficiaryNew" component={BeneficiaryNew} />
+      {__DEV__ && <Stack.Screen name="NetworkInspector" component={NetworkInspector} />}
     </Stack.Navigator>
   )
 }
