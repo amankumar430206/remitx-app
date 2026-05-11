@@ -1,7 +1,7 @@
 import React from 'react'
 import {
   View, Text, StyleSheet, FlatList,
-  TouchableOpacity, RefreshControl,
+  TouchableOpacity, RefreshControl, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -15,10 +15,19 @@ import { EmptyState } from '@/components/ui/EmptyState'
 interface Props { account: Account; onClose: () => void }
 
 export function AccountDetail({ account, onClose }: Props) {
-  const { data, isLoading, refetch } = useQuery({
+  const { data: freshAccount, isRefetching: isRefetchingAccount, refetch: refetchAccount } = useQuery({
+    queryKey: ['accounts', account.id],
+    queryFn: () => accountsApi.get(account.id).then((r) => r.data.data),
+  })
+
+  const { data, isLoading, isRefetching: isRefetchingLedger, refetch: refetchLedger } = useQuery({
     queryKey: ['ledger', account.id],
     queryFn: () => accountsApi.ledger(account.id, { limit: 50 }).then((r) => r.data.data),
   })
+
+  const isRefetching = isRefetchingAccount || isRefetchingLedger
+  const refetch = () => { refetchAccount(); refetchLedger() }
+  const displayBalance = freshAccount?.balance ?? account.balance
 
   const renderEntry = ({ item }: { item: LedgerEntry }) => {
     const isCredit = item.entry_type === 'credit'
@@ -51,15 +60,23 @@ export function AccountDetail({ account, onClose }: Props) {
 
       <View style={styles.header}>
         <Text style={styles.title}>{account.currency} Account</Text>
-        <TouchableOpacity onPress={onClose}>
-          <Ionicons name="close" size={24} color={colors.textMuted} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={refetch} disabled={isRefetching} style={styles.refreshBtn} activeOpacity={0.7}>
+            {isRefetching
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Ionicons name="sync-outline" size={20} color={colors.textMuted} />
+            }
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onClose}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Balance hero */}
       <View style={styles.hero}>
         <Text style={styles.heroLabel}>Available balance</Text>
-        <Text style={styles.heroBalance}>{formatMoney(account.balance, account.currency)}</Text>
+        <Text style={styles.heroBalance}>{formatMoney(displayBalance, account.currency)}</Text>
         {account.account_number && (
           <View style={styles.acctNumRow}>
             <Ionicons name="card-outline" size={14} color={colors.textMuted} />
@@ -74,7 +91,7 @@ export function AccountDetail({ account, onClose }: Props) {
         data={data ?? []}
         keyExtractor={(i) => i.id}
         renderItem={renderEntry}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={isLoading || isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={styles.sep} />}
         ListEmptyComponent={
@@ -94,6 +111,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: screenPadding, paddingVertical: spacing.base,
   },
   title: { fontSize: fontSize.lg, fontWeight: '700', color: colors.textPrimary },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  refreshBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
 
   hero: {
     alignItems: 'center', paddingVertical: spacing.xl,

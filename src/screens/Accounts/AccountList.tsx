@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, RefreshControl, Modal, Animated,
+  TouchableOpacity, RefreshControl, Modal, Animated, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -83,7 +83,7 @@ function AccountCard({ account, onPress }: { account: Account; onPress: () => vo
 export function AccountList() {
   const [selected, setSelected] = useState<Account | null>(null)
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => accountsApi.list().then((r) => r.data.data),
   })
@@ -101,12 +101,25 @@ export function AccountList() {
             <Text style={styles.subtitle}>{activeAccounts} of {totalAccounts} active</Text>
           )}
         </View>
-        {totalAccounts > 0 && (
-          <View style={styles.totalWrap}>
-            <Text style={styles.totalLabel}>Total balance</Text>
-            <Text style={styles.totalValue}>${Math.floor(totalUsd).toLocaleString()}</Text>
-          </View>
-        )}
+        <View style={styles.headerRight}>
+          {totalAccounts > 0 && (
+            <View style={styles.totalWrap}>
+              <Text style={styles.totalLabel}>Total balance</Text>
+              <Text style={styles.totalValue}>${Math.floor(totalUsd).toLocaleString()}</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => refetch()}
+            disabled={isRefetching}
+            style={styles.refreshBtn}
+            activeOpacity={0.7}
+          >
+            {isRefetching
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Ionicons name="sync-outline" size={20} color={colors.textMuted} />
+            }
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -143,7 +156,9 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
   subtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   totalWrap: { alignItems: 'flex-end' },
+  refreshBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   totalLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   totalValue: { fontSize: fontSize.lg, fontWeight: '800', color: colors.textPrimary },
 
