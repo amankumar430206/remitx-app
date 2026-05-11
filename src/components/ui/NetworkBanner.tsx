@@ -6,75 +6,98 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { colors } from '@/theme/colors'
 import { fontSize, spacing } from '@/theme/spacing'
 
+const PILL_H = 36
+
 export function NetworkBanner() {
   const { isOnline } = useNetworkStatus()
   const insets = useSafeAreaInsets()
-  const slideY = useRef(new Animated.Value(-80)).current
+  // Start fully above the screen — behind the status bar
+  const translateY = useRef(new Animated.Value(-(PILL_H + 16))).current
   const wasOffline = useRef(false)
+  const onlineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    if (onlineTimer.current) clearTimeout(onlineTimer.current)
+
     if (!isOnline) {
       wasOffline.current = true
-      Animated.spring(slideY, {
+      Animated.spring(translateY, {
         toValue: 0,
         useNativeDriver: true,
-        speed: 20,
-        bounciness: 4,
+        speed: 18,
+        bounciness: 6,
       }).start()
     } else if (wasOffline.current) {
-      // Came back online — slide out after a brief "Connected" moment
-      Animated.timing(slideY, {
-        toValue: -80,
-        duration: 300,
-        useNativeDriver: true,
-      }).start()
+      // Show "back online" briefly then retract
+      onlineTimer.current = setTimeout(() => {
+        Animated.timing(translateY, {
+          toValue: -(PILL_H + 16),
+          duration: 280,
+          useNativeDriver: true,
+        }).start()
+      }, 1800)
     }
+
+    return () => { if (onlineTimer.current) clearTimeout(onlineTimer.current) }
   }, [isOnline])
+
+  // top = just below the status bar, pill drops into this spot
+  const top = insets.top + spacing.sm
 
   return (
     <Animated.View
-      style={[styles.banner, { paddingTop: insets.top + spacing.xs, transform: [{ translateY: slideY }] }]}
+      style={[styles.wrap, { top }, { transform: [{ translateY: translateY }] }]}
       pointerEvents="none"
     >
-      {isOnline ? (
-        <View style={[styles.inner, styles.onlineInner]}>
-          <Ionicons name="checkmark-circle" size={15} color={colors.success} />
-          <Text style={[styles.text, styles.onlineText]}>Back online</Text>
-        </View>
-      ) : (
-        <View style={[styles.inner, styles.offlineInner]}>
-          <Ionicons name="cloud-offline-outline" size={15} color={colors.white} />
-          <Text style={[styles.text, styles.offlineText]}>No internet — check your connection</Text>
-        </View>
-      )}
+      <View style={isOnline ? styles.pillOnline : styles.pillOffline}>
+        <Ionicons
+          name={isOnline ? 'checkmark-circle' : 'wifi-outline'}
+          size={14}
+          color={isOnline ? '#fff' : '#fff'}
+        />
+        <Text style={styles.text}>
+          {isOnline ? 'Back online' : 'No internet connection'}
+        </Text>
+      </View>
     </Animated.View>
   )
 }
 
+const pill = {
+  flexDirection: 'row' as const,
+  alignItems: 'center' as const,
+  gap: 6,
+  height: PILL_H,
+  paddingHorizontal: spacing.base,
+  borderRadius: PILL_H / 2,
+  // Strong shadow so it reads clearly above any screen content
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.45,
+  shadowRadius: 12,
+  elevation: 16,
+}
+
 const styles = StyleSheet.create({
-  banner: {
+  wrap: {
     position: 'absolute',
-    top: 0, left: 0, right: 0,
+    left: 0,
+    right: 0,
     zIndex: 9999,
     alignItems: 'center',
-    paddingBottom: spacing.sm,
   },
-  inner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 999,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+  pillOffline: {
+    ...pill,
+    backgroundColor: '#DC2626',   // solid red — unmistakably distinct
   },
-  offlineInner: { backgroundColor: '#1a1a2e', borderWidth: 1, borderColor: colors.danger + '60' },
-  onlineInner:  { backgroundColor: '#0d2e1a', borderWidth: 1, borderColor: colors.success + '60' },
-  text: { fontSize: fontSize.xs, fontWeight: '700' },
-  offlineText: { color: colors.white },
-  onlineText:  { color: colors.success },
+  pillOnline: {
+    ...pill,
+    backgroundColor: '#059669',   // solid green
+  },
+  text: {
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
 })
