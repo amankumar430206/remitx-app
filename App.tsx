@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { AuthStack } from '@/navigation/AuthStack'
 import { AppTabs } from '@/navigation/AppTabs'
 import { BiometricPrompt } from '@/screens/BiometricPrompt'
+import { NetworkBanner } from '@/components/ui/NetworkBanner'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,6 +81,7 @@ export default function App() {
           <NavigationContainer linking={linking}>
             <StatusBar style="light" />
             {isAuthenticated ? <AppTabs /> : <AuthStack />}
+            <NetworkBanner />
           </NavigationContainer>
         </QueryClientProvider>
       </SafeAreaProvider>

@@ -212,12 +212,6 @@ export function NewPayment({ onClose }: Props) {
             leftIcon="document-text-outline"
           />
 
-          {!isOnline && (
-            <View style={styles.offlineBanner}>
-              <Ionicons name="cloud-offline-outline" size={14} color={colors.white} />
-              <Text style={styles.offlineText}>No internet — payment cannot be initiated</Text>
-            </View>
-          )}
           <Button
             label="Get FX Quote"
             onPress={() => {
@@ -380,12 +374,6 @@ const styles = StyleSheet.create({
   reviewValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flex: 1, marginLeft: spacing.md },
 
   actionBtn: { marginTop: spacing.sm },
-  offlineBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.danger, borderRadius: radius.md,
-    padding: spacing.sm,
-  },
-  offlineText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.white, flex: 1 },
   cancelBtn: { marginTop: spacing.xs },
 
   doneContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.base },

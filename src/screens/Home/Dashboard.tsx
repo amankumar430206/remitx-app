@@ -21,7 +21,6 @@ import { formatMoney, formatTimeAgo, statusColor, currencyColor } from '@/utils/
 import { StatusBadge } from '@/components/ui/Badge'
 import { type AppTabsParamList } from '@/navigation/AppTabs'
 import { Notifications } from '@/screens/Notifications'
-import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 
 type Nav = BottomTabNavigationProp<AppTabsParamList>
 
@@ -151,7 +150,6 @@ function FxTicker({ rates }: { rates: any[] }) {
 export function Dashboard() {
   const nav = useNavigation<Nav>()
   const user = useAuthStore((s) => s.user)
-  const { isOnline } = useNetworkStatus()
   const [showNotifs, setShowNotifs] = useState(false)
 
   const { data: accounts, isLoading: loadingAccounts, refetch: refetchAccounts } =
@@ -182,13 +180,6 @@ export function Dashboard() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {!isOnline && (
-        <View style={styles.offlineBanner}>
-          <Ionicons name="cloud-offline-outline" size={12} color={colors.white} />
-          <Text style={styles.offlineText}>No internet connection</Text>
-        </View>
-      )}
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetchAccounts(); refetchPayments() }} tintColor={colors.primary} />}
@@ -347,12 +338,6 @@ export function Dashboard() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingBottom: spacing['3xl'] },
-
-  offlineBanner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, backgroundColor: colors.danger, paddingVertical: 5,
-  },
-  offlineText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.white },
 
   // ── Header ──
   header: {
