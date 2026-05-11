@@ -26,11 +26,69 @@ interface AuthState {
   setHasHydrated: (v: boolean) => void
 }
 
-const secureStorage = {
-  getItem: (key: string) => SecureStore.getItemAsync(key),
-  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
-  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
+// ── Field-split SecureStore adapter ──────────────────────────────────────────
+// Zustand persist serializes state as one JSON blob which can exceed SecureStore's
+// 2048-byte limit when two JWTs + user object are combined. Instead we store each
+// field under its own key so every individual write stays well below the limit.
+
+const FIELDS = ['accessToken', 'refreshToken', 'user', 'tenantSlug', 'isAuthenticated'] as const
+
+function fieldKey(base: string, field: string) {
+  return `${base}__${field}`
 }
+
+const splitSecureStorage = {
+  getItem: async (key: string): Promise<string | null> => {
+    const values = await Promise.all(
+      FIELDS.map((f) => SecureStore.getItemAsync(fieldKey(key, f)))
+    )
+
+    // If all fields are null the store has never been written
+    if (values.every((v) => v === null)) return null
+
+    const [accessToken, refreshToken, userJson, tenantSlug, isAuth] = values
+    const state = {
+      accessToken: accessToken ?? null,
+      refreshToken: refreshToken ?? null,
+      user: userJson ? (JSON.parse(userJson) as AuthUser) : null,
+      tenantSlug: tenantSlug ?? null,
+      isAuthenticated: isAuth === 'true',
+    }
+
+    // Zustand persist expects { state, version }
+    return JSON.stringify({ state, version: 0 })
+  },
+
+  setItem: async (key: string, value: string): Promise<void> => {
+    const { state } = JSON.parse(value) as { state: Partial<AuthState> }
+
+    await Promise.all([
+      state.accessToken
+        ? SecureStore.setItemAsync(fieldKey(key, 'accessToken'), state.accessToken)
+        : SecureStore.deleteItemAsync(fieldKey(key, 'accessToken')),
+
+      state.refreshToken
+        ? SecureStore.setItemAsync(fieldKey(key, 'refreshToken'), state.refreshToken)
+        : SecureStore.deleteItemAsync(fieldKey(key, 'refreshToken')),
+
+      state.user
+        ? SecureStore.setItemAsync(fieldKey(key, 'user'), JSON.stringify(state.user))
+        : SecureStore.deleteItemAsync(fieldKey(key, 'user')),
+
+      state.tenantSlug
+        ? SecureStore.setItemAsync(fieldKey(key, 'tenantSlug'), state.tenantSlug)
+        : SecureStore.deleteItemAsync(fieldKey(key, 'tenantSlug')),
+
+      SecureStore.setItemAsync(fieldKey(key, 'isAuthenticated'), String(state.isAuthenticated ?? false)),
+    ])
+  },
+
+  removeItem: async (key: string): Promise<void> => {
+    await Promise.all(FIELDS.map((f) => SecureStore.deleteItemAsync(fieldKey(key, f))))
+  },
+}
+
+// ── Store ─────────────────────────────────────────────────────────────────────
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -49,13 +107,13 @@ export const useAuthStore = create<AuthState>()(
         set({ accessToken, refreshToken }),
 
       clearAuth: () =>
-        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
+        set({ user: null, accessToken: null, refreshToken: null, tenantSlug: null, isAuthenticated: false }),
 
       setHasHydrated: (v) => set({ _hasHydrated: v }),
     }),
     {
       name: 'remitx-auth',
-      storage: createJSONStorage(() => secureStorage),
+      storage: createJSONStorage(() => splitSecureStorage),
       partialize: (s) => ({
         user: s.user,
         accessToken: s.accessToken,
