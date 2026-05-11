@@ -20,16 +20,16 @@ export interface Beneficiary {
 
 export interface BeneficiaryCreatePayload {
   name: string
-  country_code: string
+  countryCode: string
   currency: string
-  bank_name?: string
-  account_number?: string
-  routing_number?: string
-  sort_code?: string
-  ifsc_code?: string
+  bankName?: string
+  accountNumber?: string
+  routingNumber?: string
+  sortCode?: string
+  ifscCode?: string
   iban?: string
-  swift_bic?: string
-  purpose_code?: string
+  swiftBic?: string
+  purposeCode: string
 }
 
 const beneficiaries = {
@@ -43,6 +43,12 @@ const beneficiaries = {
 
   create: (payload: BeneficiaryCreatePayload) =>
     apiClient.post<{ success: boolean; data: Beneficiary }>('/beneficiaries', payload),
+
+  update: (id: string, payload: Partial<BeneficiaryCreatePayload>) =>
+    apiClient.put<{ success: boolean; data: Beneficiary }>(`/beneficiaries/${id}`, payload),
+
+  delete: (id: string) =>
+    apiClient.delete(`/beneficiaries/${id}`),
 }
 
 export default beneficiaries

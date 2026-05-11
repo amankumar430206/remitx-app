@@ -11,7 +11,7 @@ export interface LoginResponse {
   accessToken: string
   refreshToken: string
   mfaRequired?: boolean
-  mfaChallengeToken?: string
+  tempToken?: string
   user: AuthUser
 }
 
@@ -34,7 +34,7 @@ const auth = {
 
   mfaChallenge: (token: string, code: string) =>
     apiClient.post<{ success: boolean; data: LoginResponse }>('/auth/mfa/challenge', {
-      challengeToken: token,
+      tempToken: token,
       code,
     }),
 }

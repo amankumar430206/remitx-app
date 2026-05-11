@@ -23,14 +23,14 @@ interface Props {
 }
 
 const COUNTRIES = [
-  { code: 'US', name: 'United States', currency: 'USD', routing: 'routing_number', routingLabel: 'Routing number' },
-  { code: 'GB', name: 'United Kingdom', currency: 'GBP', routing: 'sort_code', routingLabel: 'Sort code' },
-  { code: 'IN', name: 'India', currency: 'INR', routing: 'ifsc_code', routingLabel: 'IFSC code' },
+  { code: 'US', name: 'United States', currency: 'USD', routing: 'routingNumber', routingLabel: 'Routing number' },
+  { code: 'GB', name: 'United Kingdom', currency: 'GBP', routing: 'sortCode', routingLabel: 'Sort code' },
+  { code: 'IN', name: 'India', currency: 'INR', routing: 'ifscCode', routingLabel: 'IFSC code' },
   { code: 'AE', name: 'UAE', currency: 'AED', routing: 'iban', routingLabel: 'IBAN' },
-  { code: 'EU', name: 'Europe (SEPA)', currency: 'EUR', routing: 'iban', routingLabel: 'IBAN' },
-  { code: 'SG', name: 'Singapore', currency: 'SGD', routing: 'routing_number', routingLabel: 'Bank code' },
-  { code: 'AU', name: 'Australia', currency: 'AUD', routing: 'routing_number', routingLabel: 'BSB number' },
-  { code: 'CA', name: 'Canada', currency: 'CAD', routing: 'routing_number', routingLabel: 'Transit number' },
+  { code: 'DE', name: 'Europe (SEPA)', currency: 'EUR', routing: 'iban', routingLabel: 'IBAN' },
+  { code: 'SG', name: 'Singapore', currency: 'SGD', routing: 'routingNumber', routingLabel: 'Bank code' },
+  { code: 'AU', name: 'Australia', currency: 'AUD', routing: 'routingNumber', routingLabel: 'BSB number' },
+  { code: 'CA', name: 'Canada', currency: 'CAD', routing: 'routingNumber', routingLabel: 'Transit number' },
 ]
 
 const PURPOSE_CODES = ['SALARY', 'FAMILY', 'TRADE', 'SERVICES', 'CONSULTING', 'INVESTMENT', 'EDUCATION', 'OTHER']
@@ -58,14 +58,14 @@ export function BeneficiaryNew({ onClose }: Props = {}) {
     mutationFn: () => {
       const payload: Record<string, string> = {
         name: name.trim(),
-        country_code: selectedCountry.code,
+        countryCode: selectedCountry.code,
         currency: selectedCountry.currency,
-        purpose_code: purposeCode,
+        purposeCode,
       }
-      if (bankName.trim()) payload.bank_name = bankName.trim()
-      if (accountNumber.trim()) payload.account_number = accountNumber.trim()
+      if (bankName.trim()) payload.bankName = bankName.trim()
+      if (accountNumber.trim()) payload.accountNumber = accountNumber.trim()
       if (routingValue.trim()) payload[selectedCountry.routing] = routingValue.trim()
-      if (swiftBic.trim()) payload.swift_bic = swiftBic.trim()
+      if (swiftBic.trim()) payload.swiftBic = swiftBic.trim()
       return beneficiariesApi.create(payload as any)
     },
     onSuccess: () => {

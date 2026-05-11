@@ -97,9 +97,9 @@ export function Login({ navigation }: Props) {
       const { data: res } = await authApi.login({ email: email.trim(), password }, tenantSlug);
       const payload = res.data;
 
-      if (payload.mfaRequired && payload.mfaChallengeToken) {
+      if (payload.mfaRequired && payload.tempToken) {
         navigation.navigate("MfaChallenge", {
-          challengeToken: payload.mfaChallengeToken,
+          challengeToken: payload.tempToken,
           tenantSlug,
         });
         return;

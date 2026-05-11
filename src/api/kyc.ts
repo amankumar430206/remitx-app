@@ -16,17 +16,15 @@ export interface KycApplication {
 
 const kycApi = {
   status: () =>
-    apiClient.get<{ success: boolean; data: KycApplication | null }>('/kyc'),
+    apiClient.get<{ success: boolean; data: KycApplication | null }>('/compliance/kyc/status'),
+
+  initiate: () =>
+    apiClient.post<{ success: boolean; data: KycApplication }>('/compliance/kyc/initiate'),
 
   upload: (formData: FormData) =>
     apiClient.post<{ success: boolean; data: { path: string } }>(
-      '/kyc/upload', formData,
+      '/compliance/kyc/documents', formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
-    ),
-
-  submit: (documents: KycDocument[]) =>
-    apiClient.post<{ success: boolean; data: KycApplication }>(
-      '/kyc/submit', { documents }
     ),
 }
 
