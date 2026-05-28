@@ -37,6 +37,11 @@ export interface SubmitPaymentPayload {
   note?: string
 }
 
+export interface FeePreview {
+  feeAmount: string
+  configured: boolean
+}
+
 const payments = {
   list: (params?: { page?: number; limit?: number; status?: string }) =>
     apiClient.get<{ success: boolean; data: Payment[]; meta: { page: number; limit: number; total: number } }>(
@@ -59,6 +64,11 @@ const payments = {
 
   approvalQueue: () =>
     apiClient.get<{ success: boolean; data: Payment[] }>('/payments/approval-queue'),
+
+  feePreview: (from: string, to: string, amount: string) =>
+    apiClient.get<{ success: boolean; data: FeePreview }>('/payments/fee-preview', {
+      params: { from, to, amount },
+    }),
 }
 
 export default payments
