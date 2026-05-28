@@ -325,7 +325,7 @@ export function PaymentHistory() {
             return (
               <React.Fragment key={label}>
                 <TouchableOpacity
-                  style={[s.statTile, isActive && { backgroundColor: color + '12' }]}
+                  style={[s.statTile, isActive && { backgroundColor: color + '15', borderRadius: radius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm }]}
                   onPress={() => toggleStatFilter(key as StatFilter)}
                   activeOpacity={0.7}
                 >
