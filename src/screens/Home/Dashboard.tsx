@@ -210,16 +210,6 @@ export function Dashboard() {
                 </View>
               )}
             </View>
-            <View style={s.headerCtas}>
-              <TouchableOpacity style={s.ctaPrimary} onPress={() => nav.navigate('Payments')} activeOpacity={0.8}>
-                <Ionicons name="paper-plane" size={12} color={colors.white} />
-                <Text style={s.ctaPrimaryText}>Send money</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.ctaSecondary} onPress={() => nav.navigate('Approve')} activeOpacity={0.8}>
-                <Ionicons name="checkmark-done" size={12} color={colors.primary} />
-                <Text style={s.ctaSecondaryText}>Approve</Text>
-              </TouchableOpacity>
-            </View>
           </View>
           <TouchableOpacity style={s.bellWrap} onPress={() => setShowNotifs(true)} activeOpacity={0.7}>
             <Ionicons name="notifications-outline" size={21} color={colors.textSecondary} />
@@ -231,6 +221,18 @@ export function Dashboard() {
           </TouchableOpacity>
         </View>
 
+
+        {/* ── CTA row ── */}
+        <View style={s.ctaRow}>
+          <TouchableOpacity style={s.ctaPrimary} onPress={() => nav.navigate('Payments')} activeOpacity={0.8}>
+            <Ionicons name="paper-plane" size={14} color={colors.white} />
+            <Text style={s.ctaPrimaryText}>Send money</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.ctaSecondary} onPress={() => nav.navigate('Approve')} activeOpacity={0.8}>
+            <Ionicons name="checkmark-done" size={14} color={colors.primary} />
+            <Text style={s.ctaSecondaryText}>Approve</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* ── Account cards ── */}
         {loadingAccounts
@@ -358,22 +360,25 @@ const createStyles = (c: Colors) => StyleSheet.create({
     flexShrink: 0,
   },
   roleText: { fontSize: 9, fontWeight: '800', color: c.primaryLight, letterSpacing: 0.8, textTransform: 'uppercase' },
-  headerCtas: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  ctaPrimary: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: c.primary,
-    borderRadius: radius.full,
-    paddingHorizontal: 12, paddingVertical: 6,
+  ctaRow: {
+    flexDirection: 'row', gap: spacing.md,
+    paddingHorizontal: screenPadding, marginBottom: spacing.xl,
   },
-  ctaPrimaryText: { fontSize: fontSize.xs, fontWeight: '700', color: c.white },
+  ctaPrimary: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: c.primary,
+    borderRadius: radius.lg,
+    paddingVertical: 11,
+  },
+  ctaPrimaryText: { fontSize: fontSize.sm, fontWeight: '700', color: c.white },
   ctaSecondary: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: c.primaryFaded,
-    borderRadius: radius.full,
-    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: radius.lg,
+    paddingVertical: 11,
     borderWidth: 1, borderColor: c.primary + '40',
   },
-  ctaSecondaryText: { fontSize: fontSize.xs, fontWeight: '700', color: c.primaryLight },
+  ctaSecondaryText: { fontSize: fontSize.sm, fontWeight: '700', color: c.primaryLight },
   bellWrap: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: c.surface,
