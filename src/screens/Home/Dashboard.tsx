@@ -222,29 +222,28 @@ export function Dashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Total balance hero ── */}
+        {/* ── Total portfolio strip ── */}
         {!loadingAccounts && (accounts ?? []).length > 0 && (
-          <View style={s.heroWrap}>
-            <LinearGradient colors={['#1a1040', '#0f1a3a', '#0a0e1a']} style={s.heroGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <View style={s.heroCircle1} />
-              <View style={s.heroCircle2} />
-              <Text style={s.heroLabel}>Total portfolio</Text>
-              <View style={s.heroBalanceRow}>
-                <Text style={s.heroCurrency}>$</Text>
-                <Text style={s.heroAmount}>{Math.floor(totalUsd).toLocaleString('en-US')}</Text>
-                <Text style={s.heroAmountCents}>.{(totalUsd % 1).toFixed(2).slice(1)}</Text>
+          <View style={s.portfolioStrip}>
+            <Text style={s.portfolioLabel}>Total portfolio</Text>
+            <View style={s.portfolioBalanceRow}>
+              <Text style={s.portfolioCurrency}>$</Text>
+              <Text style={s.portfolioAmount}>{Math.floor(totalUsd).toLocaleString('en-US')}</Text>
+              <Text style={s.portfolioCents}>.{(totalUsd % 1).toFixed(2).slice(1)}</Text>
+            </View>
+            <View style={s.portfolioMeta}>
+              <View style={s.portfolioMetaItem}>
+                <View style={[s.portfolioMetaDot, { backgroundColor: colors.success }]} />
+                <Text style={s.portfolioMetaText}>
+                  {(accounts ?? []).filter((a) => a.status === 'active').length} active accounts
+                </Text>
               </View>
-              <View style={s.heroFooter}>
-                <View style={s.heroStat}>
-                  <View style={[s.heroDot, { backgroundColor: '#10B981' }]} />
-                  <Text style={s.heroStatText}>{(accounts ?? []).filter((a) => a.status === 'active').length} active accounts</Text>
-                </View>
-                <View style={s.heroStat}>
-                  <Ionicons name="trending-up" size={13} color='#10B981' />
-                  <Text style={[s.heroStatText, { color: '#10B981' }]}>All systems normal</Text>
-                </View>
+              <View style={s.portfolioMetaSep} />
+              <View style={s.portfolioMetaItem}>
+                <Ionicons name="trending-up" size={12} color={colors.success} />
+                <Text style={[s.portfolioMetaText, { color: colors.success }]}>All systems normal</Text>
               </View>
-            </LinearGradient>
+            </View>
           </View>
         )}
 
@@ -392,32 +391,40 @@ const createStyles = (c: Colors) => StyleSheet.create({
 
   loader: { marginVertical: spacing.xl },
 
-  // ── Hero ──
-  heroWrap: { paddingHorizontal: screenPadding, marginBottom: spacing.xl },
-  heroGrad: {
-    borderRadius: radius.xl + 4,
-    padding: spacing.xl,
-    overflow: 'hidden',
-    borderWidth: 1, borderColor: '#ffffff0a',
+  // ── Portfolio strip ──
+  portfolioStrip: {
+    backgroundColor: c.surface,
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
+    marginBottom: spacing.xl,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: c.border,
   },
-  heroCircle1: {
-    position: 'absolute', width: 200, height: 200, borderRadius: 100,
-    backgroundColor: '#6366F112', top: -60, right: -60,
+  portfolioLabel: {
+    fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
+    textTransform: 'uppercase', letterSpacing: 1,
+    marginBottom: spacing.sm,
   },
-  heroCircle2: {
-    position: 'absolute', width: 120, height: 120, borderRadius: 60,
-    backgroundColor: '#818CF808', bottom: -30, left: 20,
+  portfolioBalanceRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.md },
+  portfolioCurrency: {
+    fontSize: fontSize['2xl'], fontWeight: '300',
+    color: c.textSecondary, marginTop: 8, marginRight: 2,
   },
-  // Hero text is always white — the gradient background is hardcoded dark and never changes with theme
-  heroLabel: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.50)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: '600', marginBottom: spacing.sm },
-  heroBalanceRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.lg },
-  heroCurrency: { fontSize: fontSize['2xl'], fontWeight: '300', color: 'rgba(255,255,255,0.60)', marginTop: 8, marginRight: 2 },
-  heroAmount: { fontSize: 52, fontWeight: '800', color: '#FFFFFF', letterSpacing: -2, lineHeight: 58 },
-  heroAmountCents: { fontSize: fontSize.xl, fontWeight: '400', color: 'rgba(255,255,255,0.55)', marginTop: 14, marginLeft: 2 },
-  heroFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroDot: { width: 6, height: 6, borderRadius: 3 },
-  heroStatText: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.50)', fontWeight: '500' },
+  portfolioAmount: {
+    fontSize: 52, fontWeight: '800',
+    color: c.textPrimary, letterSpacing: -2, lineHeight: 58,
+  },
+  portfolioCents: {
+    fontSize: fontSize.xl, fontWeight: '400',
+    color: c.textMuted, marginTop: 14, marginLeft: 2,
+  },
+  portfolioMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  portfolioMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  portfolioMetaDot: { width: 6, height: 6, borderRadius: 3 },
+  portfolioMetaText: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '500' },
+  portfolioMetaSep: { width: 1, height: 12, backgroundColor: c.border },
 
   // ── Account cards ──
   sectionTitle2: { fontSize: fontSize.sm, fontWeight: '700', color: c.textMuted, letterSpacing: 0.5, textTransform: 'uppercase', paddingHorizontal: screenPadding, marginBottom: spacing.sm },
