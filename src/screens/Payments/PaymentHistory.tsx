@@ -297,14 +297,15 @@ export function PaymentHistory() {
             { label: 'Completed', value: completedCount, icon: 'checkmark-circle', color: colors.success },
             { label: 'Pending',   value: pendingCount,   icon: 'time',             color: colors.warning },
             { label: 'Failed',    value: failedCount,    icon: 'close-circle',     color: colors.danger  },
-          ] as const).map(({ label, value, icon, color }) => (
-            <View key={label} style={s.statTile}>
-              <View style={[s.statIconWrap, { backgroundColor: color + '18' }]}>
-                <Ionicons name={icon} size={15} color={color} />
+          ] as const).map(({ label, value, icon, color }, i, arr) => (
+            <React.Fragment key={label}>
+              <View style={s.statTile}>
+                <Ionicons name={icon} size={14} color={color} />
+                <Text style={[s.statValue, { color }]}>{value}</Text>
+                <Text style={s.statLabel}>{label}</Text>
               </View>
-              <Text style={[s.statValue, { color }]}>{value}</Text>
-              <Text style={s.statLabel}>{label}</Text>
-            </View>
+              {i < arr.length - 1 && <View style={s.statSep} />}
+            </React.Fragment>
           ))}
         </View>
       )}
@@ -328,7 +329,6 @@ export function PaymentHistory() {
             <View key={section.title}>
               <View style={s.sectionHeader}>
                 <Text style={s.sectionLabel}>{section.title}</Text>
-                <View style={s.sectionLine} />
               </View>
               <View style={s.group}>
                 {section.data.map((item, idx) => (
@@ -473,22 +473,14 @@ const createStyles = (c: Colors) => StyleSheet.create({
 
   // Stats
   statsRow: {
-    flexDirection: 'row',
-    marginHorizontal: screenPadding, marginTop: spacing.sm, marginBottom: spacing.sm,
-    gap: spacing.sm,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: screenPadding, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: c.border,
   },
   statTile: {
-    flex: 1, alignItems: 'center',
-    backgroundColor: c.card,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: c.border,
-    paddingVertical: spacing.md, paddingHorizontal: spacing.xs,
-    gap: 3,
+    flex: 1, alignItems: 'center', gap: 3,
   },
-  statIconWrap: {
-    width: 28, height: 28, borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 2,
-  },
+  statSep: { width: 1, height: 28, backgroundColor: c.border },
   statValue: { fontSize: fontSize.base, fontWeight: '800' },
   statLabel: { fontSize: 10, color: c.textMuted, fontWeight: '600', textAlign: 'center' },
 
@@ -503,7 +495,6 @@ const createStyles = (c: Colors) => StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
     letterSpacing: 0.5, textTransform: 'uppercase',
   },
-  sectionLine: { flex: 1, height: 1, backgroundColor: c.border },
   group: {
     marginHorizontal: screenPadding,
     backgroundColor: c.card,
