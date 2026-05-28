@@ -336,7 +336,7 @@ export function PaymentHistory() {
               >
                 <Ionicons name={icon} size={13} color={isActive ? colors.white : color} />
                 <Text style={[s.statPillCount, { color: isActive ? colors.white : color }]}>{value}</Text>
-                <Text style={[s.statPillLabel, { color: isActive ? colors.white + 'cc' : colors.textMuted }]}>{label}</Text>
+                <Text numberOfLines={1} style={[s.statPillLabel, { color: isActive ? 'rgba(255,255,255,0.75)' : colors.textMuted }]}>{label}</Text>
               </TouchableOpacity>
             )
           })}
@@ -507,14 +507,14 @@ const createStyles = (c: Colors) => StyleSheet.create({
   // Stat pills
   statPillScroll: { marginBottom: spacing.sm },
   statPillRow: {
-    flexDirection: 'row', gap: spacing.sm,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: screenPadding, paddingVertical: spacing.xs,
   },
   statPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     borderRadius: radius.full, borderWidth: 1,
     backgroundColor: c.surface,
-    paddingHorizontal: 12, paddingVertical: 7,
+    paddingHorizontal: 12, height: 32,
   },
   statPillCount: { fontSize: fontSize.sm, fontWeight: '800' },
   statPillLabel: { fontSize: fontSize.xs, fontWeight: '600' },
