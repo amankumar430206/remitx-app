@@ -233,22 +233,14 @@ export function Dashboard() {
         {!loadingAccounts && (accounts ?? []).length > 0 && (
           <View style={s.portfolioStrip}>
             <Text style={s.portfolioLabel}>Balances</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.portfolioCcyRow}
-              style={s.portfolioCcyScroll}
-            >
-              {currencyTotals.map(({ currency, total }, i) => (
-                <React.Fragment key={currency}>
-                  {i > 0 && <View style={s.portfolioCcySep} />}
-                  <View style={s.portfolioCcyItem}>
-                    <Text style={s.portfolioCcyCode}>{currency}</Text>
-                    <Text style={s.portfolioCcyAmount}>{formatMoney(total, currency)}</Text>
-                  </View>
-                </React.Fragment>
+            <View style={s.portfolioCcyGrid}>
+              {currencyTotals.map(({ currency, total }) => (
+                <View key={currency} style={s.portfolioCcyItem}>
+                  <Text style={s.portfolioCcyCode}>{currency}</Text>
+                  <Text style={s.portfolioCcyAmount}>{formatMoney(total, currency)}</Text>
+                </View>
               ))}
-            </ScrollView>
+            </View>
             <View style={s.portfolioMeta}>
               <View style={s.portfolioMetaItem}>
                 <View style={[s.portfolioMetaDot, { backgroundColor: colors.success }]} />
@@ -425,10 +417,14 @@ const createStyles = (c: Colors) => StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 1,
     marginBottom: spacing.md,
   },
-  portfolioCcyScroll: { marginBottom: spacing.md },
-  portfolioCcyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  portfolioCcySep: { width: 1, height: 36, backgroundColor: c.border },
-  portfolioCcyItem: { gap: 3 },
+  portfolioCcyGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    gap: spacing.lg, marginBottom: spacing.md,
+  },
+  portfolioCcyItem: {
+    gap: 3,
+    minWidth: '40%',
+  },
   portfolioCcyCode: {
     fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
     textTransform: 'uppercase', letterSpacing: 0.8,
