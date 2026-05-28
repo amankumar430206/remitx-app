@@ -43,7 +43,7 @@ export function buildReceiptHtml(p: Payment): string {
     { label: 'Transfer amount',  value: fmt(p.source_amount, p.source_currency) },
     ...(hasFee
       ? [{ label: 'Transfer fee', value: fmt(p.fee_amount, p.source_currency) }]
-      : [{ label: 'Transfer fee', value: 'Free' }]),
+      : [{ label: 'Transfer fee', value: fmt('0', p.source_currency) }]),
     ...(hasFee
       ? [{ label: 'Total debit', value: fmt(String(totalDebit), p.source_currency), bold: true }]
       : []),

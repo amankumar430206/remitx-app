@@ -180,7 +180,7 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
           <InfoRow label="Transfer amount" value={formatMoney(p.source_amount, p.source_currency)} />
           <InfoRow
             label="Transfer fee"
-            value={hasFee ? formatMoney(p.fee_amount, p.source_currency) : 'Free'}
+            value={formatMoney(hasFee ? p.fee_amount : '0', p.source_currency)}
           />
           {hasFee && (
             <InfoRow label="Total debit" value={formatMoney(String(totalDebit), p.source_currency)} />
