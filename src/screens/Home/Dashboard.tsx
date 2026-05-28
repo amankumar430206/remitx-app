@@ -187,7 +187,14 @@ export function Dashboard() {
   const initials = ((user?.first_name?.[0] ?? '') + (user?.last_name?.[0] ?? '')).toUpperCase() || firstName[0]?.toUpperCase() || 'U'
   const roleLabel = user?.role?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ?? ''
 
-  const totalUsd = (accounts ?? []).reduce((sum, a) => sum + parseFloat(a.balance ?? '0'), 0)
+  const currencyTotals = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const acc of (accounts ?? [])) {
+      const ccy = (acc.currency ?? 'USD').toUpperCase()
+      map[ccy] = (map[ccy] ?? 0) + parseFloat(acc.balance ?? '0')
+    }
+    return Object.entries(map).map(([currency, total]) => ({ currency, total }))
+  }, [accounts])
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -222,15 +229,26 @@ export function Dashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Total portfolio strip ── */}
+        {/* ── Portfolio strip ── */}
         {!loadingAccounts && (accounts ?? []).length > 0 && (
           <View style={s.portfolioStrip}>
-            <Text style={s.portfolioLabel}>Total portfolio</Text>
-            <View style={s.portfolioBalanceRow}>
-              <Text style={s.portfolioCurrency}>$</Text>
-              <Text style={s.portfolioAmount}>{Math.floor(totalUsd).toLocaleString('en-US')}</Text>
-              <Text style={s.portfolioCents}>{(totalUsd % 1).toFixed(2).slice(1)}</Text>
-            </View>
+            <Text style={s.portfolioLabel}>Balances</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.portfolioCcyRow}
+              style={s.portfolioCcyScroll}
+            >
+              {currencyTotals.map(({ currency, total }, i) => (
+                <React.Fragment key={currency}>
+                  {i > 0 && <View style={s.portfolioCcySep} />}
+                  <View style={s.portfolioCcyItem}>
+                    <Text style={s.portfolioCcyCode}>{currency}</Text>
+                    <Text style={s.portfolioCcyAmount}>{formatMoney(total, currency)}</Text>
+                  </View>
+                </React.Fragment>
+              ))}
+            </ScrollView>
             <View style={s.portfolioMeta}>
               <View style={s.portfolioMetaItem}>
                 <View style={[s.portfolioMetaDot, { backgroundColor: colors.success }]} />
@@ -405,20 +423,19 @@ const createStyles = (c: Colors) => StyleSheet.create({
   portfolioLabel: {
     fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
     textTransform: 'uppercase', letterSpacing: 1,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  portfolioBalanceRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.md },
-  portfolioCurrency: {
-    fontSize: fontSize['2xl'], fontWeight: '300',
-    color: c.textSecondary, marginTop: 8, marginRight: 2,
+  portfolioCcyScroll: { marginBottom: spacing.md },
+  portfolioCcyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  portfolioCcySep: { width: 1, height: 36, backgroundColor: c.border },
+  portfolioCcyItem: { gap: 3 },
+  portfolioCcyCode: {
+    fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
+    textTransform: 'uppercase', letterSpacing: 0.8,
   },
-  portfolioAmount: {
-    fontSize: 52, fontWeight: '800',
-    color: c.textPrimary, letterSpacing: -2, lineHeight: 58,
-  },
-  portfolioCents: {
-    fontSize: fontSize.xl, fontWeight: '400',
-    color: c.textMuted, marginTop: 14, marginLeft: 2,
+  portfolioCcyAmount: {
+    fontSize: fontSize['2xl'], fontWeight: '800',
+    color: c.textPrimary, letterSpacing: -0.5,
   },
   portfolioMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   portfolioMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
