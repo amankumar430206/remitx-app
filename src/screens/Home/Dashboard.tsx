@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useQuery } from '@tanstack/react-query'
 import accountsApi from '@/api/accounts'
-import paymentsApi from '@/api/payments'
+import paymentsApi, { type Payment } from '@/api/payments'
 import notificationsApi from '@/api/notifications'
 import fxApi from '@/api/fx'
 import { useAuthStore } from '@/stores/authStore'
@@ -21,6 +21,7 @@ import { formatMoney, formatTimeAgo, statusColor, currencyColor } from '@/utils/
 import { StatusBadge } from '@/components/ui/Badge'
 import { type AppTabsParamList } from '@/navigation/AppTabs'
 import { Notifications } from '@/screens/Notifications'
+import { PaymentDetail } from '@/screens/Payments/PaymentDetail'
 
 type Nav = BottomTabNavigationProp<AppTabsParamList>
 
@@ -173,6 +174,7 @@ export function Dashboard() {
   const s = useMemo(() => createStyles(colors), [colors])
   const user = useAuthStore((st) => st.user)
   const [showNotifs, setShowNotifs] = useState(false)
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
   const { data: accounts, isLoading: loadingAccounts, refetch: refetchAccounts } =
     useQuery({ queryKey: ['accounts'], queryFn: () => accountsApi.list().then((r) => r.data.data) })
@@ -322,6 +324,7 @@ export function Dashboard() {
                     <TouchableOpacity
                       key={p.id}
                       style={[s.paymentRow, !isLast && s.paymentRowBorder]}
+                      onPress={() => setSelectedPayment(p)}
                       activeOpacity={0.65}
                     >
                       <View style={[s.paymentIcon, { backgroundColor: sc + '15' }]}>
@@ -348,6 +351,10 @@ export function Dashboard() {
 
       <Modal visible={showNotifs} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowNotifs(false)}>
         <Notifications onClose={() => setShowNotifs(false)} />
+      </Modal>
+
+      <Modal visible={!!selectedPayment} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedPayment(null)}>
+        {selectedPayment && <PaymentDetail payment={selectedPayment} onClose={() => setSelectedPayment(null)} />}
       </Modal>
     </SafeAreaView>
   )
