@@ -48,17 +48,19 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
         <Card style={styles.detailsCard}>
           {[
             { label: 'Recipient', value: p.beneficiary_name ?? '—' },
+            { label: 'Transfer amount', value: formatMoney(p.source_amount, p.source_currency) },
+            { label: 'Transfer fee', value: formatMoney(p.fee_amount, p.source_currency) },
             { label: 'Exchange rate', value: `1 ${p.source_currency} = ${parseFloat(p.exchange_rate).toFixed(4)} ${p.dest_currency}` },
-            { label: 'Fee', value: formatMoney(p.fee_amount, p.source_currency) },
+            { label: 'They receive', value: formatMoney(p.dest_amount, p.dest_currency) },
             { label: 'Purpose', value: p.purpose_code },
-            ...(p.reference ? [{ label: 'Reference', value: p.reference }] : []),
+            ...(p.reference ? [{ label: 'Reference', value: p.reference, mono: true }] : []),
             { label: 'Created', value: formatDateTime(p.created_at) },
             ...(p.completed_at ? [{ label: 'Completed', value: formatDateTime(p.completed_at) }] : []),
-            { label: 'Payment ID', value: p.id.slice(0, 16) + '…' },
-          ].map(({ label, value }) => (
+            { label: 'Payment ID', value: p.id, mono: true },
+          ].map(({ label, value, mono }) => (
             <View key={label} style={styles.detailRow}>
               <Text style={styles.detailLabel}>{label}</Text>
-              <Text style={styles.detailValue} numberOfLines={2}>{value}</Text>
+              <Text style={[styles.detailValue, mono && styles.detailValueMono]} numberOfLines={2}>{value}</Text>
             </View>
           ))}
         </Card>
@@ -127,6 +129,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: { fontSize: fontSize.sm, color: colors.textMuted, flex: 1 },
   detailValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flex: 1.5 },
+  detailValueMono: { fontFamily: 'monospace', fontSize: fontSize.xs, color: colors.textSecondary },
 
   timelineCard: { overflow: 'hidden' },
   timelineRow: { flexDirection: 'row' },
