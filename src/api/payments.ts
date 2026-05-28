@@ -43,7 +43,7 @@ export interface FeePreview {
 }
 
 const payments = {
-  list: (params?: { page?: number; limit?: number; status?: string }) =>
+  list: (params?: { page?: number; limit?: number; status?: string; from?: string; to?: string }) =>
     apiClient.get<{ success: boolean; data: Payment[]; meta: { page: number; limit: number; total: number } }>(
       '/payments', { params }
     ),

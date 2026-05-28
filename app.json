@@ -48,7 +48,8 @@
           "cameraPermission": "RemitX uses your camera to scan KYC documents."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "apiUrl": "http://localhost:3000/api/v1"

@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback, useRef } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, RefreshControl, Modal,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  RefreshControl, Modal, Animated, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
+import DateTimePicker from '@react-native-community/datetimepicker'
 import { useQuery } from '@tanstack/react-query'
 import paymentsApi, { type Payment } from '@/api/payments'
 import { colors } from '@/theme/colors'
@@ -16,136 +17,310 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { PaymentDetail } from './PaymentDetail'
 import { NewPayment } from './NewPayment'
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Preset = '7d' | '30d' | '3m' | '6m' | 'custom'
+type DateRange = { from: Date | null; to: Date | null }
 type Section = { title: string; data: Payment[] }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const PRESETS: { label: string; value: Preset }[] = [
+  { label: '7D',  value: '7d'  },
+  { label: '30D', value: '30d' },
+  { label: '3M',  value: '3m'  },
+  { label: '6M',  value: '6m'  },
+  { label: 'Custom', value: 'custom' },
+]
+
+const STATUS_FILTERS = [
+  { label: 'All',        value: '' },
+  { label: 'Pending',    value: 'pending_approval' },
+  { label: 'Processing', value: 'processing' },
+  { label: 'Completed',  value: 'completed' },
+  { label: 'Rejected',   value: 'rejected' },
+]
+
+function presetToRange(preset: Preset): DateRange {
+  const to = new Date(); to.setHours(23, 59, 59, 999)
+  const from = new Date(); from.setHours(0, 0, 0, 0)
+  if (preset === '7d')  from.setDate(from.getDate() - 6)
+  if (preset === '30d') from.setDate(from.getDate() - 29)
+  if (preset === '3m')  from.setMonth(from.getMonth() - 3)
+  if (preset === '6m')  from.setMonth(from.getMonth() - 6)
+  return { from, to }
+}
+
+function toIso(d: Date) { return d.toISOString().slice(0, 10) }
+
+function fmtShort(d: Date) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 function groupByDate(payments: Payment[]): Section[] {
   const map = new Map<string, Payment[]>()
   const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(today.getDate() - 1)
-
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
   for (const p of payments) {
     const d = new Date(p.created_at)
     let key: string
-    if (d.toDateString() === today.toDateString()) key = 'Today'
+    if (d.toDateString() === today.toDateString())     key = 'Today'
     else if (d.toDateString() === yesterday.toDateString()) key = 'Yesterday'
     else key = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-
     if (!map.has(key)) map.set(key, [])
     map.get(key)!.push(p)
   }
-
   return Array.from(map.entries()).map(([title, data]) => ({ title, data }))
 }
+
+// ─── PaymentRow ───────────────────────────────────────────────────────────────
 
 function PaymentRow({ item, isLast, onPress }: { item: Payment; isLast: boolean; onPress: () => void }) {
   const sc = statusColor(item.status)
   return (
     <TouchableOpacity
-      style={[styles.row, !isLast && styles.rowBorder]}
+      style={[s.row, !isLast && s.rowBorder]}
       onPress={onPress}
       activeOpacity={0.65}
     >
-      <View style={[styles.rowIcon, { backgroundColor: sc + '18' }]}>
+      <View style={[s.rowIcon, { backgroundColor: sc + '18' }]}>
         <Ionicons name="swap-horizontal" size={19} color={sc} />
       </View>
-      <View style={styles.rowMeta}>
-        <Text style={styles.rowBene} numberOfLines={1}>{item.beneficiary_name ?? 'Beneficiary'}</Text>
-        <View style={styles.rowSubRow}>
-          <Text style={styles.rowRoute}>{item.source_currency}</Text>
+      <View style={s.rowMeta}>
+        <Text style={s.rowBene} numberOfLines={1}>{item.beneficiary_name ?? 'Beneficiary'}</Text>
+        <View style={s.rowSubRow}>
+          <Text style={s.rowRoute}>{item.source_currency}</Text>
           <Ionicons name="arrow-forward" size={10} color={colors.textDisabled} />
-          <Text style={styles.rowRoute}>{item.dest_currency}</Text>
-          <Text style={styles.rowDot}>·</Text>
-          <Text style={styles.rowTime}>{formatTimeAgo(item.created_at)}</Text>
+          <Text style={s.rowRoute}>{item.dest_currency}</Text>
+          <Text style={s.rowDot}>·</Text>
+          <Text style={s.rowTime}>{formatTimeAgo(item.created_at)}</Text>
         </View>
       </View>
-      <View style={styles.rowRight}>
-        <Text style={styles.rowAmt}>{formatMoney(item.source_amount, item.source_currency)}</Text>
-        <Text style={styles.rowDestAmt}>{formatMoney(item.dest_amount, item.dest_currency)}</Text>
+      <View style={s.rowRight}>
+        <Text style={s.rowAmt}>{formatMoney(item.source_amount, item.source_currency)}</Text>
+        <Text style={s.rowDestAmt}>{formatMoney(item.dest_amount, item.dest_currency)}</Text>
         <StatusBadge status={item.status} size="sm" />
       </View>
     </TouchableOpacity>
   )
 }
 
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
 export function PaymentHistory() {
-  const [selected, setSelected] = useState<Payment | null>(null)
-  const [showNew, setShowNew] = useState(false)
+  const [selected, setSelected]         = useState<Payment | null>(null)
+  const [showNew, setShowNew]           = useState(false)
   const [newPaymentKey, setNewPaymentKey] = useState(0)
 
+  // ── Filter state ──
+  const [filtersOpen, setFiltersOpen]   = useState(false)
+  const [preset, setPreset]             = useState<Preset>('30d')
+  const [dateRange, setDateRange]       = useState<DateRange>(() => presetToRange('30d'))
+  const [statusFilter, setStatusFilter] = useState('')
+  // Custom date picker state
+  const [pickerTarget, setPickerTarget] = useState<'from' | 'to' | null>(null)
+  const [pickerDate, setPickerDate]     = useState<Date>(new Date())
+
+  const filterAnim = useRef(new Animated.Value(1)).current
+
+  const toggleFilters = useCallback(() => {
+    setFiltersOpen(v => !v)
+    Animated.spring(filterAnim, {
+      toValue: filtersOpen ? 0 : 1,
+      useNativeDriver: false,
+      speed: 20,
+    }).start()
+  }, [filtersOpen])
+
+  // ── Derived filter params ──
+  const queryParams = useMemo(() => ({
+    limit: 100,
+    status:  statusFilter || undefined,
+    from:    dateRange.from ? toIso(dateRange.from) : undefined,
+    to:      dateRange.to   ? toIso(dateRange.to)   : undefined,
+  }), [statusFilter, dateRange])
+
+  const isFiltered = preset !== '30d' || !!statusFilter
+
+  // ── Query ──
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['payments'],
-    queryFn: () => paymentsApi.list({ limit: 50 }).then((r) => r.data.data),
+    queryKey: ['payments', queryParams],
+    queryFn: () => paymentsApi.list(queryParams).then((r) => r.data.data),
   })
 
-  const sections = useMemo(() => groupByDate(data ?? []), [data])
-  const totalVol = useMemo(() => (data ?? []).reduce((s, p) => s + parseFloat(p.source_amount ?? '0'), 0), [data])
+  const sections  = useMemo(() => groupByDate(data ?? []), [data])
+  const totalVol  = useMemo(() => (data ?? []).reduce((s, p) => s + parseFloat(p.source_amount ?? '0'), 0), [data])
   const completedCount = (data ?? []).filter((p) => p.status === 'completed').length
 
   const openNew = () => { setNewPaymentKey(k => k + 1); setShowNew(true) }
 
+  // ── Preset selection ──
+  const applyPreset = (p: Preset) => {
+    setPreset(p)
+    if (p !== 'custom') setDateRange(presetToRange(p))
+  }
+
+  // ── Custom date picker ──
+  const openPicker = (target: 'from' | 'to') => {
+    setPickerDate((target === 'from' ? dateRange.from : dateRange.to) ?? new Date())
+    setPickerTarget(target)
+  }
+
+  const onPickerChange = (_: unknown, date?: Date) => {
+    if (Platform.OS === 'android') setPickerTarget(null)
+    if (!date || !pickerTarget) return
+    setDateRange(prev => ({
+      from: pickerTarget === 'from' ? date : prev.from,
+      to:   pickerTarget === 'to'   ? date : prev.to,
+    }))
+  }
+
+  const clearFilters = () => {
+    setPreset('30d')
+    setDateRange(presetToRange('30d'))
+    setStatusFilter('')
+  }
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
+    <SafeAreaView style={s.safe} edges={['top']}>
+
+      {/* ── Header ── */}
+      <View style={s.header}>
         <View>
-          <Text style={styles.title}>Payments</Text>
+          <Text style={s.title}>Payments</Text>
           {data && data.length > 0 && (
-            <Text style={styles.subtitle}>{data.length} transaction{data.length !== 1 ? 's' : ''}</Text>
+            <Text style={s.subtitle}>{data.length} transaction{data.length !== 1 ? 's' : ''}</Text>
           )}
         </View>
-        <TouchableOpacity style={styles.newBtn} onPress={openNew} activeOpacity={0.85}>
-          <LinearGradient colors={['#6366F1', '#818CF8']} style={styles.newBtnGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <Ionicons name="add" size={18} color={colors.white} />
-            <Text style={styles.newBtnText}>New payment</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        <View style={s.headerRight}>
+          {/* Filter toggle */}
+          <TouchableOpacity style={[s.filterBtn, filtersOpen && s.filterBtnActive]} onPress={toggleFilters} activeOpacity={0.8}>
+            <Ionicons name="options-outline" size={18} color={filtersOpen ? colors.primary : colors.textSecondary} />
+            {isFiltered && <View style={s.filterDot} />}
+          </TouchableOpacity>
+
+          {/* New payment */}
+          <TouchableOpacity style={s.newBtn} onPress={openNew} activeOpacity={0.85}>
+            <LinearGradient colors={['#6366F1', '#818CF8']} style={s.newBtnGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Ionicons name="add" size={18} color={colors.white} />
+              <Text style={s.newBtnText}>New</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Stats strip */}
-      {data && data.length > 0 && (
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{data.length}</Text>
-            <Text style={styles.statLabel}>Total</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{completedCount}</Text>
-            <Text style={styles.statLabel}>Completed</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>${Math.floor(totalVol).toLocaleString()}</Text>
-            <Text style={styles.statLabel}>Volume (USD)</Text>
+      {/* ── Filter panel ── */}
+      {filtersOpen && (
+        <View style={s.filterPanel}>
+
+          {/* Preset chips */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.presetRow}>
+            {PRESETS.map(p => (
+              <TouchableOpacity
+                key={p.value}
+                style={[s.chip, preset === p.value && s.chipActive]}
+                onPress={() => applyPreset(p.value)}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.chipText, preset === p.value && s.chipTextActive]}>{p.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Custom date range row */}
+          {preset === 'custom' && (
+            <View style={s.dateRow}>
+              <TouchableOpacity style={s.dateBtn} onPress={() => openPicker('from')} activeOpacity={0.8}>
+                <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                <Text style={s.dateBtnText}>
+                  {dateRange.from ? fmtShort(dateRange.from) : 'From date'}
+                </Text>
+              </TouchableOpacity>
+              <Ionicons name="arrow-forward" size={14} color={colors.textDisabled} />
+              <TouchableOpacity style={s.dateBtn} onPress={() => openPicker('to')} activeOpacity={0.8}>
+                <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                <Text style={s.dateBtnText}>
+                  {dateRange.to ? fmtShort(dateRange.to) : 'To date'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Status chips */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.presetRow}>
+            {STATUS_FILTERS.map(sf => (
+              <TouchableOpacity
+                key={sf.value}
+                style={[s.chip, statusFilter === sf.value && s.chipActive]}
+                onPress={() => setStatusFilter(sf.value)}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.chipText, statusFilter === sf.value && s.chipTextActive]}>{sf.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Active range summary + clear */}
+          <View style={s.filterFooter}>
+            <View style={s.activeRangeWrap}>
+              <Ionicons name="calendar" size={12} color={colors.primary} />
+              <Text style={s.activeRange}>
+                {dateRange.from && dateRange.to
+                  ? `${fmtShort(dateRange.from)} – ${fmtShort(dateRange.to)}`
+                  : 'All time'}
+              </Text>
+            </View>
+            {isFiltered && (
+              <TouchableOpacity onPress={clearFilters} activeOpacity={0.7}>
+                <Text style={s.clearText}>Clear filters</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}
 
+      {/* ── Stats ── */}
+      {data && data.length > 0 && (
+        <View style={s.statsRow}>
+          <View style={s.statCard}>
+            <Text style={s.statValue}>{data.length}</Text>
+            <Text style={s.statLabel}>Total</Text>
+          </View>
+          <View style={s.statDivider} />
+          <View style={s.statCard}>
+            <Text style={s.statValue}>{completedCount}</Text>
+            <Text style={s.statLabel}>Completed</Text>
+          </View>
+          <View style={s.statDivider} />
+          <View style={s.statCard}>
+            <Text style={[s.statValue, { color: colors.primary }]}>${Math.floor(totalVol).toLocaleString()}</Text>
+            <Text style={s.statLabel}>Volume (USD)</Text>
+          </View>
+        </View>
+      )}
+
+      {/* ── List ── */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={s.scroll}
       >
         {sections.length === 0 && !isLoading ? (
           <EmptyState
             icon="swap-horizontal-outline"
-            title="No payments yet"
-            subtitle="Send your first international transfer in minutes"
-            actionLabel="New payment"
-            onAction={openNew}
+            title={isFiltered ? 'No results' : 'No payments yet'}
+            subtitle={isFiltered ? 'Try a different date range or status' : 'Send your first international transfer in minutes'}
+            actionLabel={isFiltered ? 'Clear filters' : 'New payment'}
+            onAction={isFiltered ? clearFilters : openNew}
           />
         ) : (
           sections.map((section) => (
             <View key={section.title}>
-              {/* Section label */}
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionLabel}>{section.title}</Text>
-                <View style={styles.sectionLine} />
+              <View style={s.sectionHeader}>
+                <Text style={s.sectionLabel}>{section.title}</Text>
+                <View style={s.sectionLine} />
               </View>
-
-              {/* Grouped card */}
-              <View style={styles.group}>
+              <View style={s.group}>
                 {section.data.map((item, idx) => (
                   <PaymentRow
                     key={item.id}
@@ -160,10 +335,51 @@ export function PaymentHistory() {
         )}
       </ScrollView>
 
+      {/* ── Native date picker (Android modal, iOS inline) ── */}
+      {pickerTarget !== null && (
+        Platform.OS === 'ios' ? (
+          <Modal visible animationType="slide" transparent onRequestClose={() => setPickerTarget(null)}>
+            <View style={s.iosPickerOverlay}>
+              <View style={s.iosPickerSheet}>
+                <View style={s.iosPickerHeader}>
+                  <Text style={s.iosPickerLabel}>
+                    {pickerTarget === 'from' ? 'From date' : 'To date'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setPickerTarget(null)}>
+                    <Text style={s.iosPickerDone}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={onPickerChange}
+                  maximumDate={new Date()}
+                  minimumDate={pickerTarget === 'to' && dateRange.from ? dateRange.from : undefined}
+                  themeVariant="dark"
+                  style={{ backgroundColor: colors.card }}
+                />
+              </View>
+            </View>
+          </Modal>
+        ) : (
+          <DateTimePicker
+            value={pickerDate}
+            mode="date"
+            display="default"
+            onChange={onPickerChange}
+            maximumDate={new Date()}
+            minimumDate={pickerTarget === 'to' && dateRange.from ? dateRange.from : undefined}
+          />
+        )
+      )}
+
+      {/* ── Detail modal ── */}
       <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelected(null)}>
         {selected && <PaymentDetail payment={selected} onClose={() => setSelected(null)} />}
       </Modal>
 
+      {/* ── New payment modal ── */}
       <Modal visible={showNew} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowNew(false)}>
         <NewPayment key={newPaymentKey} onClose={() => setShowNew(false)} />
       </Modal>
@@ -171,26 +387,82 @@ export function PaymentHistory() {
   )
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
 
+  // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.md,
+    paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.sm,
   },
   title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
   subtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  filterBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  filterBtnActive: {
+    backgroundColor: colors.primaryFaded, borderColor: colors.primary + '60',
+  },
+  filterDot: {
+    position: 'absolute', top: 6, right: 6,
+    width: 7, height: 7, borderRadius: 3.5,
+    backgroundColor: colors.primary, borderWidth: 1.5, borderColor: colors.bg,
+  },
   newBtn: { borderRadius: radius.full, overflow: 'hidden' },
   newBtnGrad: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.base,
-    borderRadius: radius.full,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
   },
   newBtnText: { fontSize: fontSize.sm, fontWeight: '700', color: colors.white },
 
+  // Filter panel
+  filterPanel: {
+    backgroundColor: colors.card,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+    paddingBottom: spacing.md, gap: spacing.sm,
+  },
+  presetRow: {
+    flexDirection: 'row', gap: spacing.sm,
+    paddingHorizontal: screenPadding, paddingTop: spacing.sm,
+  },
+  chip: {
+    borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+  },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.textMuted },
+  chipTextActive: { color: colors.white },
+
+  // Custom date range
+  dateRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: screenPadding,
+  },
+  dateBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: colors.primaryFaded, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.primary + '40',
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  },
+  dateBtnText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.primary, flex: 1 },
+
+  // Active range summary
+  filterFooter: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: screenPadding,
+  },
+  activeRangeWrap: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  activeRange: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '500' },
+  clearText: { fontSize: fontSize.xs, color: colors.danger, fontWeight: '600' },
+
+  // Stats strip
   statsRow: {
     flexDirection: 'row', alignItems: 'center',
-    marginHorizontal: screenPadding, marginBottom: spacing.base,
+    marginHorizontal: screenPadding, marginTop: spacing.sm, marginBottom: spacing.sm,
     backgroundColor: colors.card,
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
     paddingVertical: spacing.md,
@@ -200,8 +472,8 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   statDivider: { width: 1, height: 32, backgroundColor: colors.border },
 
+  // List
   scroll: { paddingBottom: spacing['3xl'], gap: spacing.xs },
-
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: screenPadding,
@@ -212,8 +484,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5, textTransform: 'uppercase',
   },
   sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
-
-  // Grouped card container
   group: {
     marginHorizontal: screenPadding,
     backgroundColor: colors.card,
@@ -221,8 +491,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     overflow: 'hidden',
   },
-
-  // Row inside group
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingHorizontal: spacing.base, paddingVertical: spacing.md,
@@ -238,4 +506,22 @@ const styles = StyleSheet.create({
   rowRight: { alignItems: 'flex-end', gap: 3, flexShrink: 0 },
   rowAmt: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
   rowDestAmt: { fontSize: fontSize.xs, color: colors.textMuted },
+
+  // iOS date picker sheet
+  iosPickerOverlay: {
+    flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  iosPickerSheet: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingBottom: spacing['3xl'], overflow: 'hidden',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  iosPickerHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: screenPadding, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  iosPickerLabel: { fontSize: fontSize.base, fontWeight: '700', color: colors.textPrimary },
+  iosPickerDone: { fontSize: fontSize.base, fontWeight: '700', color: colors.primary },
 })
