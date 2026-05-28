@@ -233,7 +233,12 @@ export function Dashboard() {
 
 
         {/* ── CTA row ── */}
-        <View style={s.ctaRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.ctaRow}
+          style={s.ctaScroll}
+        >
           {HEADER_ACTIONS.map((action) => {
             const isPrimary = action.variant === 'primary'
             return (
@@ -243,12 +248,12 @@ export function Dashboard() {
                 onPress={() => nav.navigate(action.tab)}
                 activeOpacity={0.8}
               >
-                <Ionicons name={action.icon} size={14} color={isPrimary ? colors.white : colors.primary} />
+                <Ionicons name={action.icon} size={13} color={isPrimary ? colors.white : colors.primary} />
                 <Text style={isPrimary ? s.ctaPrimaryText : s.ctaSecondaryText}>{action.label}</Text>
               </TouchableOpacity>
             )
           })}
-        </View>
+        </ScrollView>
 
         {/* ── Account cards ── */}
         {loadingAccounts
@@ -376,25 +381,26 @@ const createStyles = (c: Colors) => StyleSheet.create({
     flexShrink: 0,
   },
   roleText: { fontSize: 9, fontWeight: '800', color: c.primaryLight, letterSpacing: 0.8, textTransform: 'uppercase' },
+  ctaScroll: { marginBottom: spacing.xl },
   ctaRow: {
-    flexDirection: 'row', gap: spacing.md,
-    paddingHorizontal: screenPadding, marginBottom: spacing.xl,
+    flexDirection: 'row', gap: spacing.sm,
+    paddingHorizontal: screenPadding,
   },
   ctaPrimary: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: c.primary,
-    borderRadius: radius.lg,
-    paddingVertical: 11,
+    borderRadius: radius.full,
+    paddingHorizontal: 14, paddingVertical: 8,
   },
-  ctaPrimaryText: { fontSize: fontSize.sm, fontWeight: '700', color: c.white },
+  ctaPrimaryText: { fontSize: fontSize.xs, fontWeight: '700', color: c.white },
   ctaSecondary: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: c.primaryFaded,
-    borderRadius: radius.lg,
-    paddingVertical: 11,
+    borderRadius: radius.full,
+    paddingHorizontal: 14, paddingVertical: 8,
     borderWidth: 1, borderColor: c.primary + '40',
   },
-  ctaSecondaryText: { fontSize: fontSize.sm, fontWeight: '700', color: c.primaryLight },
+  ctaSecondaryText: { fontSize: fontSize.xs, fontWeight: '700', color: c.primaryLight },
   bellWrap: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: c.surface,
