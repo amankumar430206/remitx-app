@@ -42,7 +42,11 @@ export function BeneficiaryList() {
     const cColor = currencyColor(item.currency)
     const screening = SCREENING_CONFIG[item.screening_status] ?? SCREENING_CONFIG.pending
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => nav.navigate('BeneficiaryDetail', { id: item.id })}
+        activeOpacity={0.75}
+      >
         <View style={[styles.cardAccent, { backgroundColor: cColor }]} />
         <View style={[styles.avatar, { backgroundColor: cColor + '22' }]}>
           <Text style={[styles.avatarText, { color: cColor }]}>{item.name[0]?.toUpperCase()}</Text>
@@ -58,7 +62,8 @@ export function BeneficiaryList() {
           <View style={[styles.screeningDot, { backgroundColor: screening.color }]} />
           <Text style={[styles.screeningText, { color: screening.color }]}>{screening.label}</Text>
         </View>
-      </View>
+        <Ionicons name="chevron-forward" size={14} color={colors.textDisabled} style={{ marginLeft: 4 }} />
+      </TouchableOpacity>
     )
   }
 
