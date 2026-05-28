@@ -1,6 +1,6 @@
 import React from 'react'
 import {
-  View, Text, StyleSheet, FlatList,
+  View, Text, StyleSheet, ScrollView,
   TouchableOpacity, RefreshControl, ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -13,11 +13,11 @@ import { formatTimeAgo } from '@/utils/format'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 const NOTIF_ICONS: Record<string, { icon: keyof typeof import('@expo/vector-icons').Ionicons.glyphMap; color: string }> = {
-  'payment.pending_approval': { icon: 'time-outline', color: colors.warning },
-  'payment.status_changed':   { icon: 'swap-horizontal-outline', color: colors.info },
-  'kyc.submitted':            { icon: 'document-text-outline', color: colors.primary },
-  'kyc.approved':             { icon: 'checkmark-circle-outline', color: colors.success },
-  'kyc.rejected':             { icon: 'close-circle-outline', color: colors.danger },
+  'payment.pending_approval': { icon: 'time-outline',              color: colors.warning },
+  'payment.status_changed':   { icon: 'swap-horizontal-outline',   color: colors.info    },
+  'kyc.submitted':            { icon: 'document-text-outline',     color: colors.primary },
+  'kyc.approved':             { icon: 'checkmark-circle-outline',  color: colors.success },
+  'kyc.rejected':             { icon: 'close-circle-outline',      color: colors.danger  },
 }
 
 interface Props { onClose: () => void }
@@ -41,102 +41,130 @@ export function Notifications({ onClose }: Props) {
   })
 
   const unreadCount = (data ?? []).filter((n) => !n.read_at).length
-
-  const renderItem = ({ item }: { item: AppNotification }) => {
-    const isUnread = !item.read_at
-    const cfg = NOTIF_ICONS[item.type] ?? { icon: 'notifications-outline' as const, color: colors.textMuted }
-    return (
-      <TouchableOpacity
-        style={[styles.item, isUnread && styles.itemUnread]}
-        onPress={() => { if (isUnread) markReadMutation.mutate(item.id) }}
-        activeOpacity={0.75}
-      >
-        <View style={[styles.itemIcon, { backgroundColor: cfg.color + '22' }]}>
-          <Ionicons name={cfg.icon} size={20} color={cfg.color} />
-        </View>
-        <View style={styles.itemBody}>
-          <View style={styles.itemTitleRow}>
-            <Text style={[styles.itemTitle, isUnread && styles.itemTitleUnread]} numberOfLines={1}>
-              {item.title}
-            </Text>
-            {isUnread && <View style={styles.unreadDot} />}
-          </View>
-          <Text style={styles.itemBody2} numberOfLines={2}>{item.body}</Text>
-          <Text style={styles.itemTime}>{formatTimeAgo(item.created_at)}</Text>
-        </View>
-      </TouchableOpacity>
-    )
-  }
+  const notifications = data ?? []
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Notifications</Text>
+        <View style={styles.headerMid}>
+          <Text style={styles.title}>Notifications</Text>
+          {unreadCount > 0 && (
+            <Text style={styles.subtitle}>{unreadCount} unread</Text>
+          )}
+        </View>
         {unreadCount > 0 && (
-          <TouchableOpacity onPress={() => markAllMutation.mutate()} disabled={markAllMutation.isPending}>
+          <TouchableOpacity
+            onPress={() => markAllMutation.mutate()}
+            disabled={markAllMutation.isPending}
+            style={styles.markAllBtn}
+          >
             <Text style={styles.markAll}>Mark all read</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {unreadCount > 0 && (
-        <View style={styles.unreadBanner}>
-          <Ionicons name="ellipse" size={8} color={colors.primary} />
-          <Text style={styles.unreadBannerText}>{unreadCount} unread</Text>
-        </View>
-      )}
+      {isLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: spacing['2xl'] }} />
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
+          contentContainerStyle={styles.scroll}
+        >
+          {notifications.length === 0 ? (
+            <EmptyState
+              icon="notifications-off-outline"
+              title="No notifications"
+              subtitle="You're all caught up"
+            />
+          ) : (
+            <View style={styles.group}>
+              {notifications.map((item, idx) => {
+                const isUnread = !item.read_at
+                const isLast = idx === notifications.length - 1
+                const cfg = NOTIF_ICONS[item.type] ?? { icon: 'notifications-outline' as const, color: colors.textMuted }
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.row, !isLast && styles.rowBorder, isUnread && styles.rowUnread]}
+                    onPress={() => { if (isUnread) markReadMutation.mutate(item.id) }}
+                    activeOpacity={0.65}
+                  >
+                    {/* Unread left accent */}
+                    {isUnread && <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />}
 
-      <FlatList
-        data={data ?? []}
-        keyExtractor={(i) => i.id}
-        renderItem={renderItem}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
-        contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
-        ListEmptyComponent={
-          !isLoading
-            ? <EmptyState icon="notifications-off-outline" title="No notifications" subtitle="You're all caught up" />
-            : <ActivityIndicator color={colors.primary} style={{ marginTop: spacing['2xl'] }} />
-        }
-      />
+                    {/* Icon */}
+                    <View style={[styles.rowIcon, { backgroundColor: cfg.color + '22' }]}>
+                      <Ionicons name={cfg.icon} size={19} color={cfg.color} />
+                    </View>
+
+                    {/* Body */}
+                    <View style={styles.rowMeta}>
+                      <View style={styles.titleRow}>
+                        <Text style={[styles.rowTitle, isUnread && styles.rowTitleUnread]} numberOfLines={1}>
+                          {item.title}
+                        </Text>
+                        {isUnread && <View style={styles.unreadDot} />}
+                      </View>
+                      <Text style={styles.rowBody} numberOfLines={2}>{item.body}</Text>
+                      <Text style={styles.rowTime}>{formatTimeAgo(item.created_at)}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+
   header: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: screenPadding, paddingVertical: spacing.base,
   },
-  backBtn: { padding: spacing.xs, marginLeft: -spacing.xs, marginRight: spacing.xs },
-  title: { flex: 1, fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
+  backBtn: { padding: spacing.xs, marginLeft: -spacing.xs },
+  headerMid: { flex: 1 },
+  title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
+  subtitle: { fontSize: fontSize.xs, color: colors.primary, fontWeight: '600', marginTop: 1 },
+  markAllBtn: { paddingHorizontal: spacing.sm },
   markAll: { fontSize: fontSize.sm, color: colors.primary, fontWeight: '600' },
 
-  unreadBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    marginHorizontal: screenPadding, marginBottom: spacing.sm,
-  },
-  unreadBannerText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: '600' },
+  scroll: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
 
-  list: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
-  sep: { height: spacing.xs },
-
-  item: {
-    flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start',
-    backgroundColor: colors.card, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, padding: spacing.base,
+  // Grouped card
+  group: {
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    borderWidth: 1, borderColor: colors.border,
+    overflow: 'hidden',
   },
-  itemUnread: { borderColor: colors.primary + '44', backgroundColor: colors.primaryFaded + '22' },
-  itemIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  itemBody: { flex: 1, gap: 3 },
-  itemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  itemTitle: { flex: 1, fontSize: fontSize.sm, fontWeight: '500', color: colors.textSecondary },
-  itemTitleUnread: { fontWeight: '700', color: colors.textPrimary },
-  unreadDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.primary },
-  itemBody2: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
-  itemTime: { fontSize: fontSize.xs, color: colors.textDisabled, marginTop: 2 },
+  row: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
+    paddingHorizontal: spacing.base, paddingVertical: spacing.md,
+    position: 'relative',
+  },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  rowUnread: { backgroundColor: colors.primaryFaded + '18' },
+  accentBar: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 3 },
+  rowIcon: {
+    width: 42, height: 42, borderRadius: 21,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0, marginTop: 1, marginLeft: spacing.xs,
+  },
+  rowMeta: { flex: 1, gap: 3 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  rowTitle: { flex: 1, fontSize: fontSize.sm, fontWeight: '500', color: colors.textSecondary },
+  rowTitleUnread: { fontWeight: '700', color: colors.textPrimary },
+  unreadDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.primary, flexShrink: 0 },
+  rowBody: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
+  rowTime: { fontSize: fontSize.xs, color: colors.textDisabled },
 })
