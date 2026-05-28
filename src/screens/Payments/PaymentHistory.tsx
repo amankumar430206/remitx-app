@@ -68,6 +68,7 @@ function PaymentRow({ item, onPress }: { item: Payment; onPress: () => void }) {
 export function PaymentHistory() {
   const [selected, setSelected] = useState<Payment | null>(null)
   const [showNew, setShowNew] = useState(false)
+  const [newPaymentKey, setNewPaymentKey] = useState(0)
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['payments'],
@@ -92,7 +93,7 @@ export function PaymentHistory() {
             <Text style={styles.subtitle}>{data.length} transaction{data.length !== 1 ? 's' : ''}</Text>
           )}
         </View>
-        <TouchableOpacity style={styles.newBtn} onPress={() => setShowNew(true)} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.newBtn} onPress={() => { setNewPaymentKey(k => k + 1); setShowNew(true) }} activeOpacity={0.85}>
           <LinearGradient colors={['#6366F1', '#818CF8']} style={styles.newBtnGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <Ionicons name="add" size={18} color={colors.white} />
             <Text style={styles.newBtnText}>New payment</Text>
@@ -142,7 +143,7 @@ export function PaymentHistory() {
               title="No payments yet"
               subtitle="Send your first international transfer in minutes"
               actionLabel="New payment"
-              onAction={() => setShowNew(true)}
+              onAction={() => { setNewPaymentKey(k => k + 1); setShowNew(true) }}
             />
           ) : null
         }
@@ -153,7 +154,7 @@ export function PaymentHistory() {
       </Modal>
 
       <Modal visible={showNew} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowNew(false)}>
-        <NewPayment onClose={() => setShowNew(false)} />
+        <NewPayment key={newPaymentKey} onClose={() => setShowNew(false)} />
       </Modal>
     </SafeAreaView>
   )

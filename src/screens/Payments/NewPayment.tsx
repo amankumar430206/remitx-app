@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import beneficiariesApi, { type Beneficiary } from '@/api/beneficiaries'
 import fxApi, { type FxQuote } from '@/api/fx'
-import paymentsApi from '@/api/payments'
+import paymentsApi, { type FeePreview } from '@/api/payments'
 import accountsApi from '@/api/accounts'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius } from '@/theme/spacing'
@@ -39,6 +39,7 @@ export function NewPayment({ onClose }: Props) {
   const [purposeCode, setPurposeCode] = useState('TRADE')
   const [note, setNote] = useState('')
   const [quote, setQuote] = useState<FxQuote | null>(null)
+  const [feePreview, setFeePreview] = useState<FeePreview | null>(null)
   const [countdown, setCountdown] = useState(0)
   const [showAddBene, setShowAddBene] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -54,14 +55,24 @@ export function NewPayment({ onClose }: Props) {
     queryFn: () => accountsApi.list().then((r) => r.data.data),
   })
 
-  // Auto-select the USD source account (quote is always from USD)
   const sourceAccount = accountsList?.find(a => a.currency === 'USD' && a.status === 'active')
     ?? accountsList?.[0]
 
   const quoteMutation = useMutation({
-    mutationFn: () => fxApi.quote('USD', selectedBene!.currency, amount).then((r) => r.data.data),
-    onSuccess: (q) => {
+    mutationFn: async () => {
+      const [quoteRes, feeRes] = await Promise.allSettled([
+        fxApi.quote('USD', selectedBene!.currency, amount).then((r) => r.data.data),
+        paymentsApi.feePreview('USD', selectedBene!.currency, amount).then((r) => r.data.data),
+      ])
+      if (quoteRes.status === 'rejected') throw quoteRes.reason
+      return {
+        quote: quoteRes.value,
+        fee: feeRes.status === 'fulfilled' ? feeRes.value : null,
+      }
+    },
+    onSuccess: ({ quote: q, fee }) => {
       setQuote(q)
+      setFeePreview(fee)
       const secs = Math.floor((new Date(q.expiresAt).getTime() - Date.now()) / 1000)
       setCountdown(secs)
       setStep('review')
@@ -92,7 +103,7 @@ export function NewPayment({ onClose }: Props) {
           if (c <= 1) {
             clearInterval(timerRef.current!)
             showAlert('Quote expired', 'The FX rate has expired. Please get a new quote.', [
-              { text: 'Get new quote', onPress: () => { setStep('amount'); setQuote(null) } },
+              { text: 'Get new quote', onPress: () => { setStep('amount'); setQuote(null); setFeePreview(null) } },
             ])
             return 0
           }
@@ -102,6 +113,20 @@ export function NewPayment({ onClose }: Props) {
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [step, quote])
+
+  // Fee display helper
+  const feeLabel = (() => {
+    if (!feePreview) return null
+    if (!feePreview.configured) return 'No fee configured'
+    const amt = parseFloat(feePreview.feeAmount)
+    return amt === 0 ? 'Free' : formatMoney(feePreview.feeAmount, 'USD')
+  })()
+
+  const totalDebit = (() => {
+    if (!feePreview?.configured || !amount) return null
+    const total = parseFloat(amount) + parseFloat(feePreview.feeAmount)
+    return formatMoney(String(total), 'USD')
+  })()
 
   // ─── Step: Beneficiary ───────────────────────────────────────────────────
   if (step === 'beneficiary') {
@@ -246,9 +271,21 @@ export function NewPayment({ onClose }: Props) {
     const secs = countdown % 60
     const urgentTimer = countdown < 30
 
+    const reviewRows = [
+      { label: 'Recipient', value: selectedBene?.name ?? '' },
+      { label: 'Bank', value: selectedBene?.bank_name ?? selectedBene?.country_code ?? '' },
+      { label: 'Transfer amount', value: formatMoney(amount, 'USD') },
+      ...(feePreview ? [{ label: 'Transfer fee', value: feeLabel ?? '—', isFee: true }] : []),
+      ...(totalDebit ? [{ label: 'Total debit', value: totalDebit, isTotal: true }] : []),
+      { label: 'They receive', value: formatMoney(quote.toAmount, quote.to) },
+      { label: 'Exchange rate', value: `1 USD = ${parseFloat(quote.rate).toFixed(4)} ${quote.to}` },
+      { label: 'Purpose', value: purposeCode },
+      ...(note ? [{ label: 'Note', value: note }] : []),
+    ]
+
     return (
       <SafeAreaView style={styles.safe}>
-        <ScreenHeader title="New Payment" subtitle="Step 3 of 3 — Review & confirm" onBack={() => { setStep('amount'); setQuote(null) }} />
+        <ScreenHeader title="New Payment" subtitle="Step 3 of 3 — Review & confirm" onBack={() => { setStep('amount'); setQuote(null); setFeePreview(null) }} />
         <StepBar current={2} />
         <ScrollView contentContainerStyle={styles.scroll}>
           {/* FX countdown */}
@@ -260,18 +297,14 @@ export function NewPayment({ onClose }: Props) {
           </View>
 
           <Card style={styles.reviewCard}>
-            {[
-              { label: 'Recipient', value: selectedBene?.name ?? '' },
-              { label: 'Bank', value: selectedBene?.bank_name ?? selectedBene?.country_code ?? '' },
-              { label: 'You send', value: formatMoney(amount, 'USD') },
-              { label: 'They receive', value: formatMoney(quote.toAmount, quote.to) },
-              { label: 'Exchange rate', value: `1 USD = ${parseFloat(quote.rate).toFixed(4)} ${quote.to}` },
-              { label: 'Purpose', value: purposeCode },
-              ...(note ? [{ label: 'Note', value: note }] : []),
-            ].map(({ label, value }) => (
-              <View key={label} style={styles.reviewRow}>
-                <Text style={styles.reviewLabel}>{label}</Text>
-                <Text style={styles.reviewValue}>{value}</Text>
+            {reviewRows.map(({ label, value, isFee, isTotal }) => (
+              <View key={label} style={[styles.reviewRow, isTotal && styles.reviewRowTotal]}>
+                <Text style={[styles.reviewLabel, isTotal && styles.reviewLabelTotal]}>{label}</Text>
+                <Text style={[
+                  styles.reviewValue,
+                  isFee && { color: colors.success },
+                  isTotal && styles.reviewValueTotal,
+                ]}>{value}</Text>
               </View>
             ))}
           </Card>
@@ -354,7 +387,6 @@ const styles = StyleSheet.create({
   emptyCta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.xl },
   emptyCtaText: { fontSize: fontSize.base, fontWeight: '700', color: colors.white },
 
-  // Add-another row at bottom of list
   addBeneRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.primary + '40',
@@ -388,9 +420,19 @@ const styles = StyleSheet.create({
   timerTextUrgent: { color: colors.danger },
 
   reviewCard: { gap: spacing.sm },
-  reviewRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border },
+  reviewRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  reviewRowTotal: {
+    borderBottomWidth: 0, marginTop: spacing.xs,
+    backgroundColor: colors.primaryFaded, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.sm,
+  },
   reviewLabel: { fontSize: fontSize.sm, color: colors.textMuted },
+  reviewLabelTotal: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
   reviewValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flex: 1, marginLeft: spacing.md },
+  reviewValueTotal: { fontSize: fontSize.base, fontWeight: '800', color: colors.primary },
 
   actionBtn: { marginTop: spacing.sm },
   cancelBtn: { marginTop: spacing.xs },
