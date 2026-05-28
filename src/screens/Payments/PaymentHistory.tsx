@@ -335,7 +335,7 @@ export function PaymentHistory() {
                 activeOpacity={0.75}
               >
                 <Ionicons name={icon} size={13} color={isActive ? colors.white : color} />
-                <Text style={[s.statPillCount, { color: isActive ? colors.white : color }]}>{value}</Text>
+                <Text style={[s.statPillCount, { color: isActive ? colors.white : colors.textPrimary }]}>{value}</Text>
                 <Text numberOfLines={1} style={[s.statPillLabel, { color: isActive ? 'rgba(255,255,255,0.75)' : colors.textMuted }]}>{label}</Text>
               </TouchableOpacity>
             )
@@ -516,7 +516,7 @@ const createStyles = (c: Colors) => StyleSheet.create({
     backgroundColor: c.surface,
     paddingHorizontal: 12, height: 32,
   },
-  statPillCount: { fontSize: fontSize.sm, fontWeight: '800' },
+  statPillCount: { fontSize: fontSize.base, fontWeight: '800' },
   statPillLabel: { fontSize: fontSize.xs, fontWeight: '600' },
 
   // List
