@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity,
@@ -11,7 +11,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import beneficiariesApi from '@/api/beneficiaries'
 import { getApiError } from '@/utils/apiError'
 import { useAlert } from '@/hooks/useAlert'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -41,6 +41,8 @@ export function BeneficiaryNew({ onClose }: Props = {}) {
   const { showAlert } = useAlert()
   const nav = useNavigation<Nav>()
   const qc = useQueryClient()
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
 
   const dismiss = () => {
     if (onClose) onClose()
@@ -83,43 +85,43 @@ export function BeneficiaryNew({ onClose }: Props = {}) {
   const canSubmit = name.trim().length > 0
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={dismiss} style={styles.backBtn}>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={dismiss} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Add Beneficiary</Text>
+        <Text style={s.title}>Add Beneficiary</Text>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={s.scroll}
         keyboardShouldPersistTaps="handled"
       >
         <Input label="Full name" value={name} onChangeText={setName} placeholder="John Smith" leftIcon="person-outline" />
 
         {/* Country picker */}
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Country & Currency</Text>
+        <View style={s.field}>
+          <Text style={s.fieldLabel}>Country & Currency</Text>
           <TouchableOpacity
-            style={styles.pickerBtn}
+            style={s.pickerBtn}
             onPress={() => setShowCountryPicker((v) => !v)}
           >
-            <Text style={styles.pickerValue}>{selectedCountry.name} · {selectedCountry.currency}</Text>
+            <Text style={s.pickerValue}>{selectedCountry.name} · {selectedCountry.currency}</Text>
             <Ionicons name={showCountryPicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
           </TouchableOpacity>
           {showCountryPicker && (
-            <View style={styles.pickerList}>
+            <View style={s.pickerList}>
               {COUNTRIES.map((c) => (
                 <TouchableOpacity
                   key={c.code}
-                  style={[styles.pickerItem, c.code === selectedCountry.code && styles.pickerItemActive]}
+                  style={[s.pickerItem, c.code === selectedCountry.code && s.pickerItemActive]}
                   onPress={() => { setSelectedCountry(c); setShowCountryPicker(false); setRoutingValue('') }}
                 >
-                  <Text style={[styles.pickerItemText, c.code === selectedCountry.code && styles.pickerItemTextActive]}>
+                  <Text style={[s.pickerItemText, c.code === selectedCountry.code && s.pickerItemTextActive]}>
                     {c.name}
                   </Text>
-                  <Text style={styles.pickerItemCcy}>{c.currency}</Text>
+                  <Text style={s.pickerItemCcy}>{c.currency}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -138,24 +140,24 @@ export function BeneficiaryNew({ onClose }: Props = {}) {
         <Input label="SWIFT / BIC (optional)" value={swiftBic} onChangeText={setSwiftBic} placeholder="e.g. BARCGB22" leftIcon="globe-outline" autoCapitalize="characters" />
 
         {/* Purpose code */}
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Purpose</Text>
+        <View style={s.field}>
+          <Text style={s.fieldLabel}>Purpose</Text>
           <TouchableOpacity
-            style={styles.pickerBtn}
+            style={s.pickerBtn}
             onPress={() => setShowPurposePicker((v) => !v)}
           >
-            <Text style={styles.pickerValue}>{purposeCode}</Text>
+            <Text style={s.pickerValue}>{purposeCode}</Text>
             <Ionicons name={showPurposePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
           </TouchableOpacity>
           {showPurposePicker && (
-            <View style={styles.pickerList}>
+            <View style={s.pickerList}>
               {PURPOSE_CODES.map((p) => (
                 <TouchableOpacity
                   key={p}
-                  style={[styles.pickerItem, p === purposeCode && styles.pickerItemActive]}
+                  style={[s.pickerItem, p === purposeCode && s.pickerItemActive]}
                   onPress={() => { setPurposeCode(p); setShowPurposePicker(false) }}
                 >
-                  <Text style={[styles.pickerItemText, p === purposeCode && styles.pickerItemTextActive]}>{p}</Text>
+                  <Text style={[s.pickerItemText, p === purposeCode && s.pickerItemTextActive]}>{p}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -174,35 +176,35 @@ export function BeneficiaryNew({ onClose }: Props = {}) {
   )
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: screenPadding, paddingVertical: spacing.base,
   },
   backBtn: { padding: spacing.xs, marginLeft: -spacing.xs },
-  title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
+  title: { fontSize: fontSize.xl, fontWeight: '800', color: c.textPrimary },
   scroll: { padding: screenPadding, gap: spacing.base, paddingBottom: spacing['3xl'] },
 
   field: { gap: spacing.xs },
-  fieldLabel: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textSecondary, letterSpacing: 0.2 },
+  fieldLabel: { fontSize: fontSize.sm, fontWeight: '600', color: c.textSecondary, letterSpacing: 0.2 },
   pickerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: c.surface, borderRadius: radius.md,
+    borderWidth: 1.5, borderColor: c.border,
     paddingHorizontal: spacing.base, paddingVertical: spacing.md, minHeight: 52,
   },
-  pickerValue: { fontSize: fontSize.md, color: colors.textPrimary },
+  pickerValue: { fontSize: fontSize.md, color: c.textPrimary },
   pickerList: {
-    backgroundColor: colors.card, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    backgroundColor: c.card, borderRadius: radius.md,
+    borderWidth: 1, borderColor: c.border, overflow: 'hidden',
   },
   pickerItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border,
+    padding: spacing.md, borderBottomWidth: 1, borderBottomColor: c.border,
   },
-  pickerItemActive: { backgroundColor: colors.primaryFaded },
-  pickerItemText: { fontSize: fontSize.sm, color: colors.textPrimary },
-  pickerItemTextActive: { color: colors.primary, fontWeight: '700' },
-  pickerItemCcy: { fontSize: fontSize.xs, color: colors.textMuted },
+  pickerItemActive: { backgroundColor: c.primaryFaded },
+  pickerItemText: { fontSize: fontSize.sm, color: c.textPrimary },
+  pickerItemTextActive: { color: c.primary, fontWeight: '700' },
+  pickerItemCcy: { fontSize: fontSize.xs, color: c.textMuted },
 })

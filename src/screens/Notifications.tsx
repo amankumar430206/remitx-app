@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, RefreshControl, ActivityIndicator,
@@ -7,23 +7,26 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import notificationsApi, { type AppNotification } from '@/api/notifications'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatTimeAgo } from '@/utils/format'
 import { EmptyState } from '@/components/ui/EmptyState'
 
-const NOTIF_ICONS: Record<string, { icon: keyof typeof import('@expo/vector-icons').Ionicons.glyphMap; color: string }> = {
-  'payment.pending_approval': { icon: 'time-outline',              color: colors.warning },
-  'payment.status_changed':   { icon: 'swap-horizontal-outline',   color: colors.info    },
-  'kyc.submitted':            { icon: 'document-text-outline',     color: colors.primary },
-  'kyc.approved':             { icon: 'checkmark-circle-outline',  color: colors.success },
-  'kyc.rejected':             { icon: 'close-circle-outline',      color: colors.danger  },
+// Semantic colors — theme-independent
+const NOTIF_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  'payment.pending_approval': { icon: 'time-outline',             color: '#F59E0B' },
+  'payment.status_changed':   { icon: 'swap-horizontal-outline',  color: '#3B82F6' },
+  'kyc.submitted':            { icon: 'document-text-outline',    color: '#6366F1' },
+  'kyc.approved':             { icon: 'checkmark-circle-outline', color: '#10B981' },
+  'kyc.rejected':             { icon: 'close-circle-outline',     color: '#EF4444' },
 }
 
 interface Props { onClose: () => void }
 
 export function Notifications({ onClose }: Props) {
   const qc = useQueryClient()
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['notifications'],
@@ -44,25 +47,22 @@ export function Notifications({ onClose }: Props) {
   const notifications = data ?? []
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={styles.backBtn}>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={onClose} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
-        <View style={styles.headerMid}>
-          <Text style={styles.title}>Notifications</Text>
-          {unreadCount > 0 && (
-            <Text style={styles.subtitle}>{unreadCount} unread</Text>
-          )}
+        <View style={s.headerMid}>
+          <Text style={s.title}>Notifications</Text>
+          {unreadCount > 0 && <Text style={s.subtitle}>{unreadCount} unread</Text>}
         </View>
         {unreadCount > 0 && (
           <TouchableOpacity
             onPress={() => markAllMutation.mutate()}
             disabled={markAllMutation.isPending}
-            style={styles.markAllBtn}
+            style={s.markAllBtn}
           >
-            <Text style={styles.markAll}>Mark all read</Text>
+            <Text style={s.markAll}>Mark all read</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -73,16 +73,12 @@ export function Notifications({ onClose }: Props) {
         <ScrollView
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={s.scroll}
         >
           {notifications.length === 0 ? (
-            <EmptyState
-              icon="notifications-off-outline"
-              title="No notifications"
-              subtitle="You're all caught up"
-            />
+            <EmptyState icon="notifications-off-outline" title="No notifications" subtitle="You're all caught up" />
           ) : (
-            <View style={styles.group}>
+            <View style={s.group}>
               {notifications.map((item, idx) => {
                 const isUnread = !item.read_at
                 const isLast = idx === notifications.length - 1
@@ -90,28 +86,21 @@ export function Notifications({ onClose }: Props) {
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    style={[styles.row, !isLast && styles.rowBorder, isUnread && styles.rowUnread]}
+                    style={[s.row, !isLast && s.rowBorder, isUnread && s.rowUnread]}
                     onPress={() => { if (isUnread) markReadMutation.mutate(item.id) }}
                     activeOpacity={0.65}
                   >
-                    {/* Unread left accent */}
-                    {isUnread && <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />}
-
-                    {/* Icon */}
-                    <View style={[styles.rowIcon, { backgroundColor: cfg.color + '22' }]}>
+                    {isUnread && <View style={[s.accentBar, { backgroundColor: colors.primary }]} />}
+                    <View style={[s.rowIcon, { backgroundColor: cfg.color + '22' }]}>
                       <Ionicons name={cfg.icon} size={19} color={cfg.color} />
                     </View>
-
-                    {/* Body */}
-                    <View style={styles.rowMeta}>
-                      <View style={styles.titleRow}>
-                        <Text style={[styles.rowTitle, isUnread && styles.rowTitleUnread]} numberOfLines={1}>
-                          {item.title}
-                        </Text>
-                        {isUnread && <View style={styles.unreadDot} />}
+                    <View style={s.rowMeta}>
+                      <View style={s.titleRow}>
+                        <Text style={[s.rowTitle, isUnread && s.rowTitleUnread]} numberOfLines={1}>{item.title}</Text>
+                        {isUnread && <View style={s.unreadDot} />}
                       </View>
-                      <Text style={styles.rowBody} numberOfLines={2}>{item.body}</Text>
-                      <Text style={styles.rowTime}>{formatTimeAgo(item.created_at)}</Text>
+                      <Text style={s.rowBody} numberOfLines={2}>{item.body}</Text>
+                      <Text style={s.rowTime}>{formatTimeAgo(item.created_at)}</Text>
                     </View>
                   </TouchableOpacity>
                 )
@@ -124,8 +113,8 @@ export function Notifications({ onClose }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -133,38 +122,27 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: spacing.xs, marginLeft: -spacing.xs },
   headerMid: { flex: 1 },
-  title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
-  subtitle: { fontSize: fontSize.xs, color: colors.primary, fontWeight: '600', marginTop: 1 },
+  title: { fontSize: fontSize.xl, fontWeight: '800', color: c.textPrimary },
+  subtitle: { fontSize: fontSize.xs, color: c.primary, fontWeight: '600', marginTop: 1 },
   markAllBtn: { paddingHorizontal: spacing.sm },
-  markAll: { fontSize: fontSize.sm, color: colors.primary, fontWeight: '600' },
+  markAll: { fontSize: fontSize.sm, color: c.primary, fontWeight: '600' },
 
   scroll: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
 
-  // Grouped card
-  group: {
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border,
-    overflow: 'hidden',
-  },
+  group: { backgroundColor: c.card, borderRadius: radius.xl, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },
   row: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
-    paddingHorizontal: spacing.base, paddingVertical: spacing.md,
-    position: 'relative',
+    paddingHorizontal: spacing.base, paddingVertical: spacing.md, position: 'relative',
   },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  rowUnread: { backgroundColor: colors.primaryFaded + '18' },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: c.border },
+  rowUnread: { backgroundColor: c.primaryFaded + '18' },
   accentBar: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 3 },
-  rowIcon: {
-    width: 42, height: 42, borderRadius: 21,
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0, marginTop: 1, marginLeft: spacing.xs,
-  },
+  rowIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, marginLeft: spacing.xs },
   rowMeta: { flex: 1, gap: 3 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  rowTitle: { flex: 1, fontSize: fontSize.sm, fontWeight: '500', color: colors.textSecondary },
-  rowTitleUnread: { fontWeight: '700', color: colors.textPrimary },
-  unreadDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.primary, flexShrink: 0 },
-  rowBody: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
-  rowTime: { fontSize: fontSize.xs, color: colors.textDisabled },
+  rowTitle: { flex: 1, fontSize: fontSize.sm, fontWeight: '500', color: c.textSecondary },
+  rowTitleUnread: { fontWeight: '700', color: c.textPrimary },
+  unreadDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: c.primary, flexShrink: 0 },
+  rowBody: { fontSize: fontSize.xs, color: c.textMuted, lineHeight: 17 },
+  rowTime: { fontSize: fontSize.xs, color: c.textDisabled },
 })

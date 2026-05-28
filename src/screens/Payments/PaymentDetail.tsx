@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Clipboard, Alert,
@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
 import { type Payment } from '@/api/payments'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatDateTime, statusColor, statusLabel } from '@/utils/format'
 import { buildReceiptHtml } from '@/utils/receipt'
@@ -29,9 +29,9 @@ function statusIcon(status: string): keyof typeof Ionicons.glyphMap {
   }
 }
 
-function heroGradient(status: string): [string, string, string] {
+function heroGradient(status: string, bg: string): [string, string, string] {
   const c = statusColor(status)
-  return [`${c}22`, `${c}08`, colors.bg]
+  return [`${c}22`, `${c}08`, bg]
 }
 
 function copyToClipboard(text: string, label: string) {
@@ -41,7 +41,12 @@ function copyToClipboard(text: string, label: string) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SectionHeader({ icon, title }: { icon: keyof typeof Ionicons.glyphMap; title: string }) {
+function SectionHeader({ icon, title, s, colors }: {
+  icon: keyof typeof Ionicons.glyphMap
+  title: string
+  s: ReturnType<typeof createStyles>
+  colors: Colors
+}) {
   return (
     <View style={s.sectionHeader}>
       <View style={s.sectionIconWrap}>
@@ -53,13 +58,15 @@ function SectionHeader({ icon, title }: { icon: keyof typeof Ionicons.glyphMap; 
 }
 
 function InfoRow({
-  label, value, mono, copyable, last,
+  label, value, mono, copyable, last, s, colors,
 }: {
   label: string
   value: string
   mono?: boolean
   copyable?: boolean
   last?: boolean
+  s: ReturnType<typeof createStyles>
+  colors: Colors
 }) {
   return (
     <View style={[s.infoRow, last && s.infoRowLast]}>
@@ -85,6 +92,8 @@ function InfoRow({
 interface Props { payment: Payment; onClose: () => void }
 
 export function PaymentDetail({ payment: p, onClose }: Props) {
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
   const history = p.status_history ?? []
   const sc = statusColor(p.status)
   const [sharing, setSharing] = useState(false)
@@ -137,7 +146,7 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
       >
         {/* ── Hero ── */}
         <LinearGradient
-          colors={heroGradient(p.status)}
+          colors={heroGradient(p.status, colors.bg)}
           style={s.hero}
           start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
         >
@@ -175,42 +184,44 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
         </LinearGradient>
 
         {/* ── Transaction ── */}
-        <SectionHeader icon="swap-horizontal-outline" title="Transaction" />
+        <SectionHeader icon="swap-horizontal-outline" title="Transaction" s={s} colors={colors} />
         <View style={s.card}>
-          <InfoRow label="Transfer amount" value={formatMoney(p.source_amount, p.source_currency)} />
+          <InfoRow label="Transfer amount" value={formatMoney(p.source_amount, p.source_currency)} s={s} colors={colors} />
           <InfoRow
             label="Transfer fee"
             value={formatMoney(hasFee ? p.fee_amount : '0', p.source_currency)}
+            s={s} colors={colors}
           />
           {hasFee && (
-            <InfoRow label="Total debit" value={formatMoney(String(totalDebit), p.source_currency)} />
+            <InfoRow label="Total debit" value={formatMoney(String(totalDebit), p.source_currency)} s={s} colors={colors} />
           )}
           <InfoRow
             label="Exchange rate"
             value={`1 ${p.source_currency} = ${parseFloat(p.exchange_rate).toFixed(4)} ${p.dest_currency}`}
+            s={s} colors={colors}
           />
-          <InfoRow label="They receive" value={formatMoney(p.dest_amount, p.dest_currency)} last />
+          <InfoRow label="They receive" value={formatMoney(p.dest_amount, p.dest_currency)} last s={s} colors={colors} />
         </View>
 
         {/* ── Recipient ── */}
-        <SectionHeader icon="person-outline" title="Recipient" />
+        <SectionHeader icon="person-outline" title="Recipient" s={s} colors={colors} />
         <View style={s.card}>
-          <InfoRow label="Name" value={p.beneficiary_name ?? '—'} />
-          <InfoRow label="Country" value={p.beneficiary_country_code ?? '—'} last />
+          <InfoRow label="Name" value={p.beneficiary_name ?? '—'} s={s} colors={colors} />
+          <InfoRow label="Country" value={p.beneficiary_country_code ?? '—'} last s={s} colors={colors} />
         </View>
 
         {/* ── Details ── */}
-        <SectionHeader icon="document-text-outline" title="Details" />
+        <SectionHeader icon="document-text-outline" title="Details" s={s} colors={colors} />
         <View style={s.card}>
-          <InfoRow label="Purpose" value={p.purpose_code} />
+          <InfoRow label="Purpose" value={p.purpose_code} s={s} colors={colors} />
           {p.reference && (
-            <InfoRow label="Reference" value={p.reference} mono copyable />
+            <InfoRow label="Reference" value={p.reference} mono copyable s={s} colors={colors} />
           )}
-          <InfoRow label="Submitted" value={formatDateTime(p.created_at)} />
+          <InfoRow label="Submitted" value={formatDateTime(p.created_at)} s={s} colors={colors} />
           {p.completed_at && (
-            <InfoRow label="Completed" value={formatDateTime(p.completed_at)} />
+            <InfoRow label="Completed" value={formatDateTime(p.completed_at)} s={s} colors={colors} />
           )}
-          <InfoRow label="Payment ID" value={p.id} mono copyable last />
+          <InfoRow label="Payment ID" value={p.id} mono copyable last s={s} colors={colors} />
         </View>
 
         {/* ── Share receipt CTA ── */}
@@ -235,7 +246,7 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
         {/* ── Timeline ── */}
         {history.length > 0 && (
           <>
-            <SectionHeader icon="time-outline" title="Timeline" />
+            <SectionHeader icon="time-outline" title="Timeline" s={s} colors={colors} />
             <View style={s.card}>
               {history.map((h, idx) => {
                 const isLast = idx === history.length - 1
@@ -277,26 +288,26 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
   )
 }
 
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
 
   handleBar: { alignItems: 'center', paddingTop: spacing.sm, paddingBottom: spacing.xs },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: c.border },
 
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: screenPadding, paddingBottom: spacing.md,
   },
-  headerTitle: { fontSize: fontSize.base, fontWeight: '700', color: colors.textPrimary },
+  headerTitle: { fontSize: fontSize.base, fontWeight: '700', color: c.textPrimary },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerBtn: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: colors.primaryFaded, borderWidth: 1, borderColor: colors.primary + '40',
+    backgroundColor: c.primaryFaded, borderWidth: 1, borderColor: c.primary + '40',
     alignItems: 'center', justifyContent: 'center',
   },
   closeBtn: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: c.surface, borderWidth: 1, borderColor: c.border,
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -306,14 +317,14 @@ const s = StyleSheet.create({
     gap: spacing.sm, paddingVertical: spacing.md,
     borderRadius: radius.xl,
   },
-  shareBtnText: { fontSize: fontSize.sm, fontWeight: '700', color: colors.white },
+  shareBtnText: { fontSize: fontSize.sm, fontWeight: '700', color: c.white },
 
   scroll: { paddingHorizontal: screenPadding, paddingBottom: spacing['4xl'], gap: spacing.md },
 
   // ── Hero ──
   hero: {
     borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: c.border,
     alignItems: 'center', gap: spacing.md,
     paddingTop: spacing['2xl'], paddingBottom: spacing.xl,
     overflow: 'hidden',
@@ -327,7 +338,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
   },
   heroAmount: {
-    fontSize: 40, fontWeight: '800', color: colors.textPrimary,
+    fontSize: 40, fontWeight: '800', color: c.textPrimary,
     letterSpacing: -1.5, lineHeight: 46,
   },
   statusPill: {
@@ -344,17 +355,17 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   routeBox: {
-    flex: 1, backgroundColor: colors.surface,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    flex: 1, backgroundColor: c.surface,
+    borderRadius: radius.md, borderWidth: 1, borderColor: c.border,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     gap: 3,
   },
   routeBoxRight: { alignItems: 'flex-end' },
-  routeCcy: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '700', letterSpacing: 0.5 },
-  routeAmt: { fontSize: fontSize.sm, fontWeight: '800', color: colors.textPrimary },
+  routeCcy: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '700', letterSpacing: 0.5 },
+  routeAmt: { fontSize: fontSize.sm, fontWeight: '800', color: c.textPrimary },
   routeArrow: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: c.surface, borderWidth: 1, borderColor: c.border,
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -364,28 +375,28 @@ const s = StyleSheet.create({
   },
   sectionIconWrap: {
     width: 20, height: 20, borderRadius: 6,
-    backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: c.primaryFaded, alignItems: 'center', justifyContent: 'center',
   },
-  sectionTitle: { fontSize: fontSize.xs, fontWeight: '700', color: colors.textPrimary, letterSpacing: 0.3 },
+  sectionTitle: { fontSize: fontSize.xs, fontWeight: '700', color: c.textPrimary, letterSpacing: 0.3 },
 
   // ── Info card ──
   card: {
-    backgroundColor: colors.card, borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    backgroundColor: c.card, borderRadius: radius.xl,
+    borderWidth: 1, borderColor: c.border, overflow: 'hidden',
   },
   infoRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: spacing.base, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    borderBottomWidth: 1, borderBottomColor: c.border,
     gap: spacing.md,
   },
   infoRowLast: { borderBottomWidth: 0 },
-  infoLabel: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1 },
+  infoLabel: { fontSize: fontSize.xs, color: c.textMuted, flex: 1 },
   infoValueWrap: { flexDirection: 'row', alignItems: 'center', flex: 1.6, justifyContent: 'flex-end' },
-  infoValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary, textAlign: 'right' },
+  infoValue: { fontSize: fontSize.sm, fontWeight: '600', color: c.textPrimary, textAlign: 'right' },
   infoValueMono: {
     fontFamily: 'monospace', fontSize: 10,
-    color: colors.textSecondary, letterSpacing: 0.3,
+    color: c.textSecondary, letterSpacing: 0.3,
   },
 
   // ── Timeline ──
@@ -396,17 +407,17 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, zIndex: 1,
   },
-  timelineLine: { flex: 1, width: 2, backgroundColor: colors.border, marginVertical: 2 },
+  timelineLine: { flex: 1, width: 2, backgroundColor: c.border, marginVertical: 2 },
   timelineContent: {
     flex: 1, paddingVertical: spacing.md, paddingRight: spacing.base,
-    borderBottomWidth: 1, borderBottomColor: colors.border, gap: 3,
+    borderBottomWidth: 1, borderBottomColor: c.border, gap: 3,
   },
   timelineContentLast: { borderBottomWidth: 0 },
   timelineStatus: { fontSize: fontSize.sm, fontWeight: '700' },
-  timelineDate: { fontSize: fontSize.xs, color: colors.textMuted },
+  timelineDate: { fontSize: fontSize.xs, color: c.textMuted },
   timelineNoteWrap: {
-    marginTop: 4, backgroundColor: colors.surface,
+    marginTop: 4, backgroundColor: c.surface,
     borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
   },
-  timelineNote: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
+  timelineNote: { fontSize: fontSize.xs, color: c.textSecondary, lineHeight: 16 },
 })

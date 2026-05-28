@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import { Platform, StyleSheet } from 'react-native'
@@ -8,7 +8,7 @@ import { PaymentHistory } from '@/screens/Payments/PaymentHistory'
 import { ApprovalQueue } from '@/screens/Approve/ApprovalQueue'
 import { AccountList } from '@/screens/Accounts/AccountList'
 import { SettingsStack } from '@/navigation/SettingsStack'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { fontSize } from '@/theme/spacing'
 
 export type AppTabsParamList = {
@@ -28,15 +28,17 @@ type TabIcon = {
 
 const tabIcons: Record<keyof AppTabsParamList, TabIcon> = {
   Dashboard: { active: 'home', inactive: 'home-outline' },
-  Payments: { active: 'swap-horizontal', inactive: 'swap-horizontal-outline' },
-  Approve: { active: 'checkmark-circle', inactive: 'checkmark-circle-outline' },
-  Accounts: { active: 'wallet', inactive: 'wallet-outline' },
-  Settings: { active: 'settings', inactive: 'settings-outline' },
+  Payments:  { active: 'swap-horizontal', inactive: 'swap-horizontal-outline' },
+  Approve:   { active: 'checkmark-circle', inactive: 'checkmark-circle-outline' },
+  Accounts:  { active: 'wallet', inactive: 'wallet-outline' },
+  Settings:  { active: 'settings', inactive: 'settings-outline' },
 }
 
 export function AppTabs() {
   const insets = useSafeAreaInsets()
+  const colors = useColors()
   const tabBarHeight = Platform.OS === 'ios' ? 60 : 56
+  const s = useMemo(() => createStyles(colors), [colors])
 
   return (
     <Tab.Navigator
@@ -54,12 +56,12 @@ export function AppTabs() {
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarStyle: [styles.tabBar, {
+        tabBarLabelStyle: s.tabLabel,
+        tabBarStyle: [s.tabBar, {
           height: tabBarHeight + insets.bottom,
           paddingBottom: insets.bottom,
         }],
-        tabBarItemStyle: styles.tabItem,
+        tabBarItemStyle: s.tabItem,
       })}
     >
       <Tab.Screen name="Dashboard" component={Dashboard} />
@@ -71,10 +73,10 @@ export function AppTabs() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Colors) => StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.card,
-    borderTopColor: colors.border,
+    backgroundColor: c.card,
+    borderTopColor: c.border,
     borderTopWidth: 1,
     paddingTop: 6,
     elevation: 0,

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, ActivityIndicator, Modal, Animated,
@@ -15,7 +15,7 @@ import paymentsApi from '@/api/payments'
 import notificationsApi from '@/api/notifications'
 import fxApi from '@/api/fx'
 import { useAuthStore } from '@/stores/authStore'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo, statusColor, currencyColor } from '@/utils/format'
 import { StatusBadge } from '@/components/ui/Badge'
@@ -34,7 +34,7 @@ function getGreeting() {
   return 'Good evening'
 }
 
-// Gradient palettes per currency
+// Gradient palettes per currency (theme-independent dark card backgrounds)
 const CARD_GRADIENTS: Record<string, readonly [string, string, string]> = {
   USD: ['#1a3a2a', '#0d4f35', '#0a2e1f'],
   EUR: ['#0f2a4a', '#0a3660', '#071d3d'],
@@ -55,7 +55,12 @@ const QUICK_ACTIONS = [
   { icon: 'settings' as const,        label: 'Settings', tab: 'Settings' as const, colors: ['#3B82F6', '#60A5FA'] as [string, string] },
 ]
 
-function PressableIcon({ item, onPress }: { item: typeof QUICK_ACTIONS[0]; onPress: () => void }) {
+function PressableIcon({ item, onPress, s, colors }: {
+  item: typeof QUICK_ACTIONS[0]
+  onPress: () => void
+  s: ReturnType<typeof createStyles>
+  colors: Colors
+}) {
   const scale = useRef(new Animated.Value(1)).current
 
   const handlePressIn = () => Animated.spring(scale, { toValue: 0.92, useNativeDriver: true, speed: 50 }).start()
@@ -67,19 +72,24 @@ function PressableIcon({ item, onPress }: { item: typeof QUICK_ACTIONS[0]; onPre
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       activeOpacity={1}
-      style={styles.quickBtn}
+      style={s.quickBtn}
     >
       <Animated.View style={{ transform: [{ scale }] }}>
-        <LinearGradient colors={item.colors} style={styles.quickIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <LinearGradient colors={item.colors} style={s.quickIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <Ionicons name={item.icon} size={24} color={colors.white} />
         </LinearGradient>
       </Animated.View>
-      <Text style={styles.quickLabel}>{item.label}</Text>
+      <Text style={s.quickLabel}>{item.label}</Text>
     </TouchableOpacity>
   )
 }
 
-function AccountCard({ acc, onPress }: { acc: any; onPress: () => void }) {
+function AccountCard({ acc, onPress, s, colors }: {
+  acc: any
+  onPress: () => void
+  s: ReturnType<typeof createStyles>
+  colors: Colors
+}) {
   const scale = useRef(new Animated.Value(1)).current
   const grad = cardGradient(acc.currency)
   const cc = currencyColor(acc.currency)
@@ -94,36 +104,36 @@ function AccountCard({ acc, onPress }: { acc: any; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} activeOpacity={1}>
       <Animated.View style={{ transform: [{ scale }] }}>
-        <LinearGradient colors={grad} style={styles.card} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <LinearGradient colors={grad} style={s.card} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           {/* Decorative circles */}
-          <View style={[styles.cardCircle, styles.cardCircle1, { backgroundColor: cc + '10' }]} />
-          <View style={[styles.cardCircle, styles.cardCircle2, { backgroundColor: cc + '08' }]} />
+          <View style={[s.cardCircle, s.cardCircle1, { backgroundColor: cc + '10' }]} />
+          <View style={[s.cardCircle, s.cardCircle2, { backgroundColor: cc + '08' }]} />
 
-          <View style={styles.cardTopRow}>
-            <View style={[styles.ccyBadge, { backgroundColor: cc + '25', borderColor: cc + '40' }]}>
-              <Text style={[styles.ccyText, { color: cc }]}>{acc.currency}</Text>
+          <View style={s.cardTopRow}>
+            <View style={[s.ccyBadge, { backgroundColor: cc + '25', borderColor: cc + '40' }]}>
+              <Text style={[s.ccyText, { color: cc }]}>{acc.currency}</Text>
             </View>
-            <View style={styles.statusRow}>
-              <View style={[styles.statusDot, { backgroundColor: acc.status === 'active' ? '#10B981' : colors.textDisabled }]} />
-              <Text style={styles.statusText}>{acc.status === 'active' ? 'Active' : 'Inactive'}</Text>
-            </View>
-          </View>
-
-          <View style={styles.cardBalanceWrap}>
-            <Text style={styles.cardBalanceLabel}>Available balance</Text>
-            <View style={styles.cardBalanceRow}>
-              <Text style={styles.cardBalanceWhole}>{whole}</Text>
-              <Text style={styles.cardBalanceCents}>{cents}</Text>
+            <View style={s.statusRow}>
+              <View style={[s.statusDot, { backgroundColor: acc.status === 'active' ? '#10B981' : colors.textDisabled }]} />
+              <Text style={s.statusText}>{acc.status === 'active' ? 'Active' : 'Inactive'}</Text>
             </View>
           </View>
 
-          <View style={styles.cardFooter}>
+          <View style={s.cardBalanceWrap}>
+            <Text style={s.cardBalanceLabel}>Available balance</Text>
+            <View style={s.cardBalanceRow}>
+              <Text style={s.cardBalanceWhole}>{whole}</Text>
+              <Text style={s.cardBalanceCents}>{cents}</Text>
+            </View>
+          </View>
+
+          <View style={s.cardFooter}>
             {acc.account_number ? (
-              <Text style={styles.cardNum}>···· {acc.account_number.slice(-4)}</Text>
+              <Text style={s.cardNum}>···· {acc.account_number.slice(-4)}</Text>
             ) : (
-              <Text style={styles.cardNum}>{acc.provider_name ?? ''}</Text>
+              <Text style={s.cardNum}>{acc.provider_name ?? ''}</Text>
             )}
-            <View style={styles.cardChevron}>
+            <View style={s.cardChevron}>
               <Ionicons name="chevron-forward" size={14} color={colors.white + '60'} />
             </View>
           </View>
@@ -133,14 +143,14 @@ function AccountCard({ acc, onPress }: { acc: any; onPress: () => void }) {
   )
 }
 
-function FxTicker({ rates }: { rates: any[] }) {
+function FxTicker({ rates, s }: { rates: any[]; s: ReturnType<typeof createStyles> }) {
   if (!rates?.length) return null
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fxContent} style={styles.fxScroll}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.fxContent} style={s.fxScroll}>
       {rates.slice(0, 6).map((r) => (
-        <View key={`${r.from}-${r.to}`} style={styles.fxPill}>
-          <Text style={styles.fxPair}>{r.from}/{r.to}</Text>
-          <Text style={styles.fxRate}>{parseFloat(r.clientRate).toFixed(4)}</Text>
+        <View key={`${r.from}-${r.to}`} style={s.fxPill}>
+          <Text style={s.fxPair}>{r.from}/{r.to}</Text>
+          <Text style={s.fxRate}>{parseFloat(r.clientRate).toFixed(4)}</Text>
         </View>
       ))}
     </ScrollView>
@@ -149,7 +159,9 @@ function FxTicker({ rates }: { rates: any[] }) {
 
 export function Dashboard() {
   const nav = useNavigation<Nav>()
-  const user = useAuthStore((s) => s.user)
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
+  const user = useAuthStore((st) => st.user)
   const [showNotifs, setShowNotifs] = useState(false)
 
   const { data: accounts, isLoading: loadingAccounts, refetch: refetchAccounts } =
@@ -175,37 +187,36 @@ export function Dashboard() {
   const initials = ((user?.first_name?.[0] ?? '') + (user?.last_name?.[0] ?? '')).toUpperCase() || firstName[0]?.toUpperCase() || 'U'
   const roleLabel = user?.role?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ?? ''
 
-  // Aggregate total USD balance across accounts (rough estimate for hero display)
   const totalUsd = (accounts ?? []).reduce((sum, a) => sum + parseFloat(a.balance ?? '0'), 0)
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetchAccounts(); refetchPayments() }} tintColor={colors.primary} />}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={s.scroll}
       >
         {/* ── Header ── */}
-        <View style={styles.header}>
-          <LinearGradient colors={['#6366F1', '#818CF8']} style={styles.avatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <Text style={styles.avatarText}>{initials}</Text>
+        <View style={s.header}>
+          <LinearGradient colors={['#6366F1', '#818CF8']} style={s.avatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <Text style={s.avatarText}>{initials}</Text>
           </LinearGradient>
-          <View style={styles.headerMid}>
-            <Text style={styles.greetSub}>{getGreeting()},</Text>
-            <View style={styles.nameRow}>
-              <Text style={styles.greetName} numberOfLines={1}>{firstName}</Text>
+          <View style={s.headerMid}>
+            <Text style={s.greetSub}>{getGreeting()},</Text>
+            <View style={s.nameRow}>
+              <Text style={s.greetName} numberOfLines={1}>{firstName}</Text>
               {!!roleLabel && (
-                <View style={styles.rolePill}>
-                  <Text style={styles.roleText}>{roleLabel}</Text>
+                <View style={s.rolePill}>
+                  <Text style={s.roleText}>{roleLabel}</Text>
                 </View>
               )}
             </View>
           </View>
-          <TouchableOpacity style={styles.bellWrap} onPress={() => setShowNotifs(true)} activeOpacity={0.7}>
+          <TouchableOpacity style={s.bellWrap} onPress={() => setShowNotifs(true)} activeOpacity={0.7}>
             <Ionicons name="notifications-outline" size={21} color={colors.textSecondary} />
             {unreadCount > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              <View style={s.bellBadge}>
+                <Text style={s.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -213,24 +224,24 @@ export function Dashboard() {
 
         {/* ── Total balance hero ── */}
         {!loadingAccounts && (accounts ?? []).length > 0 && (
-          <View style={styles.heroWrap}>
-            <LinearGradient colors={['#1a1040', '#0f1a3a', '#0a0e1a']} style={styles.heroGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <View style={styles.heroCircle1} />
-              <View style={styles.heroCircle2} />
-              <Text style={styles.heroLabel}>Total portfolio</Text>
-              <View style={styles.heroBalanceRow}>
-                <Text style={styles.heroCurrency}>$</Text>
-                <Text style={styles.heroAmount}>{Math.floor(totalUsd).toLocaleString('en-US')}</Text>
-                <Text style={styles.heroAmountCents}>.{(totalUsd % 1).toFixed(2).slice(1)}</Text>
+          <View style={s.heroWrap}>
+            <LinearGradient colors={['#1a1040', '#0f1a3a', '#0a0e1a']} style={s.heroGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <View style={s.heroCircle1} />
+              <View style={s.heroCircle2} />
+              <Text style={s.heroLabel}>Total portfolio</Text>
+              <View style={s.heroBalanceRow}>
+                <Text style={s.heroCurrency}>$</Text>
+                <Text style={s.heroAmount}>{Math.floor(totalUsd).toLocaleString('en-US')}</Text>
+                <Text style={s.heroAmountCents}>.{(totalUsd % 1).toFixed(2).slice(1)}</Text>
               </View>
-              <View style={styles.heroFooter}>
-                <View style={styles.heroStat}>
-                  <View style={[styles.heroDot, { backgroundColor: '#10B981' }]} />
-                  <Text style={styles.heroStatText}>{(accounts ?? []).filter((a) => a.status === 'active').length} active accounts</Text>
+              <View style={s.heroFooter}>
+                <View style={s.heroStat}>
+                  <View style={[s.heroDot, { backgroundColor: '#10B981' }]} />
+                  <Text style={s.heroStatText}>{(accounts ?? []).filter((a) => a.status === 'active').length} active accounts</Text>
                 </View>
-                <View style={styles.heroStat}>
+                <View style={s.heroStat}>
                   <Ionicons name="trending-up" size={13} color='#10B981' />
-                  <Text style={[styles.heroStatText, { color: '#10B981' }]}>All systems normal</Text>
+                  <Text style={[s.heroStatText, { color: '#10B981' }]}>All systems normal</Text>
                 </View>
               </View>
             </LinearGradient>
@@ -239,13 +250,13 @@ export function Dashboard() {
 
         {/* ── Account cards ── */}
         {loadingAccounts
-          ? <ActivityIndicator color={colors.primary} style={styles.loader} />
+          ? <ActivityIndicator color={colors.primary} style={s.loader} />
           : (accounts ?? []).length > 0 && (
             <>
-              <Text style={styles.sectionTitle2}>Your accounts</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsContent} style={styles.cardsScroll}>
+              <Text style={s.sectionTitle2}>Your accounts</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardsContent} style={s.cardsScroll}>
                 {(accounts ?? []).map((acc) => (
-                  <AccountCard key={acc.id} acc={acc} onPress={() => nav.navigate('Accounts')} />
+                  <AccountCard key={acc.id} acc={acc} onPress={() => nav.navigate('Accounts')} s={s} colors={colors} />
                 ))}
               </ScrollView>
             </>
@@ -255,67 +266,67 @@ export function Dashboard() {
         {/* ── FX rates ticker ── */}
         {(fxRates ?? []).length > 0 && (
           <>
-            <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>Live rates</Text>
-              <View style={styles.liveDot}>
-                <View style={styles.liveDotInner} />
-                <Text style={styles.liveText}>LIVE</Text>
+            <View style={s.sectionRow}>
+              <Text style={s.sectionTitle}>Live rates</Text>
+              <View style={s.liveDot}>
+                <View style={s.liveDotInner} />
+                <Text style={s.liveText}>LIVE</Text>
               </View>
             </View>
-            <FxTicker rates={fxRates ?? []} />
+            <FxTicker rates={fxRates ?? []} s={s} />
           </>
         )}
 
         {/* ── Quick actions ── */}
-        <Text style={[styles.sectionTitle, { paddingHorizontal: screenPadding, marginBottom: spacing.md }]}>Quick actions</Text>
-        <View style={styles.quickRow}>
+        <Text style={[s.sectionTitle, { paddingHorizontal: screenPadding, marginBottom: spacing.md }]}>Quick actions</Text>
+        <View style={s.quickRow}>
           {QUICK_ACTIONS.map((a) => (
-            <PressableIcon key={a.label} item={a} onPress={() => nav.navigate(a.tab)} />
+            <PressableIcon key={a.label} item={a} onPress={() => nav.navigate(a.tab)} s={s} colors={colors} />
           ))}
         </View>
 
         {/* ── Recent payments ── */}
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Recent payments</Text>
-          <TouchableOpacity onPress={() => nav.navigate('Payments')} style={styles.seeAllBtn}>
-            <Text style={styles.seeAll}>See all</Text>
+        <View style={s.sectionRow}>
+          <Text style={s.sectionTitle}>Recent payments</Text>
+          <TouchableOpacity onPress={() => nav.navigate('Payments')} style={s.seeAllBtn}>
+            <Text style={s.seeAll}>See all</Text>
             <Ionicons name="chevron-forward" size={14} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
         {loadingPayments
-          ? <ActivityIndicator color={colors.primary} style={styles.loader} />
+          ? <ActivityIndicator color={colors.primary} style={s.loader} />
           : (recentPayments ?? []).length === 0
             ? (
-              <View style={styles.emptyBox}>
-                <LinearGradient colors={['#6366F115', '#6366F108']} style={styles.emptyIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <View style={s.emptyBox}>
+                <LinearGradient colors={['#6366F115', '#6366F108']} style={s.emptyIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                   <Ionicons name="swap-horizontal-outline" size={28} color={colors.primary + '80'} />
                 </LinearGradient>
-                <Text style={styles.emptyTitle}>No payments yet</Text>
-                <Text style={styles.emptyText}>Your transactions will appear here</Text>
+                <Text style={s.emptyTitle}>No payments yet</Text>
+                <Text style={s.emptyText}>Your transactions will appear here</Text>
               </View>
             )
             : (
-              <View style={styles.paymentGroup}>
+              <View style={s.paymentGroup}>
                 {(recentPayments ?? []).map((p, i) => {
                   const sc = statusColor(p.status)
                   const isLast = i === (recentPayments?.length ?? 0) - 1
                   return (
                     <TouchableOpacity
                       key={p.id}
-                      style={[styles.paymentRow, !isLast && styles.paymentRowBorder]}
+                      style={[s.paymentRow, !isLast && s.paymentRowBorder]}
                       activeOpacity={0.65}
                     >
-                      <View style={[styles.paymentIcon, { backgroundColor: sc + '15' }]}>
+                      <View style={[s.paymentIcon, { backgroundColor: sc + '15' }]}>
                         <Ionicons name="swap-horizontal" size={18} color={sc} />
                       </View>
-                      <View style={styles.paymentMeta}>
-                        <Text style={styles.paymentBene} numberOfLines={1}>{p.beneficiary_name ?? 'Beneficiary'}</Text>
-                        <Text style={styles.paymentRoute}>{p.source_currency} → {p.dest_currency}</Text>
-                        <Text style={styles.paymentTime}>{formatTimeAgo(p.created_at)}</Text>
+                      <View style={s.paymentMeta}>
+                        <Text style={s.paymentBene} numberOfLines={1}>{p.beneficiary_name ?? 'Beneficiary'}</Text>
+                        <Text style={s.paymentRoute}>{p.source_currency} → {p.dest_currency}</Text>
+                        <Text style={s.paymentTime}>{formatTimeAgo(p.created_at)}</Text>
                       </View>
-                      <View style={styles.paymentRight}>
-                        <Text style={styles.paymentAmt}>{formatMoney(p.source_amount, p.source_currency)}</Text>
+                      <View style={s.paymentRight}>
+                        <Text style={s.paymentAmt}>{formatMoney(p.source_amount, p.source_currency)}</Text>
                         <StatusBadge status={p.status} size="sm" />
                       </View>
                     </TouchableOpacity>
@@ -325,7 +336,7 @@ export function Dashboard() {
             )
         }
 
-        <View style={styles.bottomSpacer} />
+        <View style={s.bottomSpacer} />
       </ScrollView>
 
       <Modal visible={showNotifs} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowNotifs(false)}>
@@ -335,8 +346,8 @@ export function Dashboard() {
   )
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   scroll: { paddingBottom: spacing['3xl'] },
 
   // ── Header ──
@@ -350,34 +361,34 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
-  avatarText: { fontSize: fontSize.base, fontWeight: '800', color: colors.white },
+  avatarText: { fontSize: fontSize.base, fontWeight: '800', color: c.white },
   headerMid: { flex: 1 },
-  greetSub: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: 2 },
+  greetSub: { fontSize: fontSize.sm, color: c.textMuted, marginBottom: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'nowrap' },
-  greetName: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5, flexShrink: 1 },
+  greetName: { fontSize: fontSize.xl, fontWeight: '800', color: c.textPrimary, letterSpacing: -0.5, flexShrink: 1 },
   rolePill: {
-    backgroundColor: colors.primaryFaded,
+    backgroundColor: c.primaryFaded,
     borderRadius: radius.full,
     paddingHorizontal: 9, paddingVertical: 2,
-    borderWidth: 1, borderColor: colors.primary + '30',
+    borderWidth: 1, borderColor: c.primary + '30',
     flexShrink: 0,
   },
-  roleText: { fontSize: 9, fontWeight: '800', color: colors.primaryLight, letterSpacing: 0.8, textTransform: 'uppercase' },
+  roleText: { fontSize: 9, fontWeight: '800', color: c.primaryLight, letterSpacing: 0.8, textTransform: 'uppercase' },
   bellWrap: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: c.border,
     flexShrink: 0,
   },
   bellBadge: {
     position: 'absolute', top: 8, right: 8,
     minWidth: 15, height: 15, borderRadius: 8,
-    backgroundColor: colors.danger,
+    backgroundColor: c.danger,
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
-    borderWidth: 1.5, borderColor: colors.bg,
+    borderWidth: 1.5, borderColor: c.bg,
   },
-  bellBadgeText: { fontSize: 8, fontWeight: '900', color: colors.white },
+  bellBadgeText: { fontSize: 8, fontWeight: '900', color: c.white },
 
   loader: { marginVertical: spacing.xl },
 
@@ -397,18 +408,18 @@ const styles = StyleSheet.create({
     position: 'absolute', width: 120, height: 120, borderRadius: 60,
     backgroundColor: '#818CF808', bottom: -30, left: 20,
   },
-  heroLabel: { fontSize: fontSize.xs, color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase', fontWeight: '600', marginBottom: spacing.sm },
+  heroLabel: { fontSize: fontSize.xs, color: c.textMuted, letterSpacing: 1, textTransform: 'uppercase', fontWeight: '600', marginBottom: spacing.sm },
   heroBalanceRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.lg },
-  heroCurrency: { fontSize: fontSize['2xl'], fontWeight: '300', color: colors.textSecondary, marginTop: 8, marginRight: 2 },
-  heroAmount: { fontSize: 52, fontWeight: '800', color: colors.textPrimary, letterSpacing: -2, lineHeight: 58 },
-  heroAmountCents: { fontSize: fontSize.xl, fontWeight: '400', color: colors.textMuted, marginTop: 14, marginLeft: 2 },
+  heroCurrency: { fontSize: fontSize['2xl'], fontWeight: '300', color: c.textSecondary, marginTop: 8, marginRight: 2 },
+  heroAmount: { fontSize: 52, fontWeight: '800', color: c.textPrimary, letterSpacing: -2, lineHeight: 58 },
+  heroAmountCents: { fontSize: fontSize.xl, fontWeight: '400', color: c.textMuted, marginTop: 14, marginLeft: 2 },
   heroFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   heroStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroDot: { width: 6, height: 6, borderRadius: 3 },
-  heroStatText: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '500' },
+  heroStatText: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '500' },
 
   // ── Account cards ──
-  sectionTitle2: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.5, textTransform: 'uppercase', paddingHorizontal: screenPadding, marginBottom: spacing.sm },
+  sectionTitle2: { fontSize: fontSize.sm, fontWeight: '700', color: c.textMuted, letterSpacing: 0.5, textTransform: 'uppercase', paddingHorizontal: screenPadding, marginBottom: spacing.sm },
   cardsScroll: { marginBottom: spacing.xl },
   cardsContent: { paddingHorizontal: screenPadding, gap: spacing.md },
   card: {
@@ -430,17 +441,17 @@ const styles = StyleSheet.create({
   ccyText: { fontSize: fontSize.xs, fontWeight: '900', letterSpacing: 1 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: fontSize.xs, color: colors.white + '60', fontWeight: '500' },
+  statusText: { fontSize: fontSize.xs, color: c.white + '60', fontWeight: '500' },
   cardBalanceWrap: { marginBottom: spacing.lg },
-  cardBalanceLabel: { fontSize: fontSize.xs, color: colors.white + '50', letterSpacing: 0.5, marginBottom: 6 },
+  cardBalanceLabel: { fontSize: fontSize.xs, color: c.white + '50', letterSpacing: 0.5, marginBottom: 6 },
   cardBalanceRow: { flexDirection: 'row', alignItems: 'flex-end' },
-  cardBalanceWhole: { fontSize: 30, fontWeight: '800', color: colors.white, letterSpacing: -1 },
-  cardBalanceCents: { fontSize: fontSize.md, fontWeight: '400', color: colors.white + '70', marginBottom: 4, marginLeft: 1 },
+  cardBalanceWhole: { fontSize: 30, fontWeight: '800', color: c.white, letterSpacing: -1 },
+  cardBalanceCents: { fontSize: fontSize.md, fontWeight: '400', color: c.white + '70', marginBottom: 4, marginLeft: 1 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardNum: { fontSize: fontSize.xs, color: colors.white + '45', letterSpacing: 2, fontWeight: '500' },
+  cardNum: { fontSize: fontSize.xs, color: c.white + '45', letterSpacing: 2, fontWeight: '500' },
   cardChevron: {
     width: 24, height: 24, borderRadius: 12,
-    backgroundColor: colors.white + '10',
+    backgroundColor: c.white + '10',
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -449,13 +460,13 @@ const styles = StyleSheet.create({
   fxContent: { paddingHorizontal: screenPadding, gap: spacing.sm },
   fxPill: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.full,
     paddingHorizontal: spacing.base, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: c.border,
   },
-  fxPair: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '600', letterSpacing: 0.3 },
-  fxRate: { fontSize: fontSize.xs, color: colors.textPrimary, fontWeight: '800' },
+  fxPair: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '600', letterSpacing: 0.3 },
+  fxRate: { fontSize: fontSize.xs, color: c.textPrimary, fontWeight: '800' },
 
   // ── Quick actions ──
   quickRow: {
@@ -464,16 +475,16 @@ const styles = StyleSheet.create({
   },
   quickBtn: { alignItems: 'center', gap: spacing.sm, flex: 1 },
   quickIcon: { width: 58, height: 58, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  quickLabel: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '600' },
+  quickLabel: { fontSize: fontSize.xs, color: c.textSecondary, fontWeight: '600' },
 
   // ── Section headers ──
   sectionRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: screenPadding, marginBottom: spacing.md,
   },
-  sectionTitle: { fontSize: fontSize.base, fontWeight: '700', color: colors.textPrimary },
+  sectionTitle: { fontSize: fontSize.base, fontWeight: '700', color: c.textPrimary },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  seeAll: { fontSize: fontSize.sm, color: colors.primary, fontWeight: '600' },
+  seeAll: { fontSize: fontSize.sm, color: c.primary, fontWeight: '600' },
   liveDot: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   liveDotInner: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' },
   liveText: { fontSize: 10, color: '#10B981', fontWeight: '800', letterSpacing: 1 },
@@ -482,38 +493,38 @@ const styles = StyleSheet.create({
   emptyBox: {
     marginHorizontal: screenPadding,
     paddingVertical: spacing['2xl'] + spacing.sm,
-    backgroundColor: colors.card,
+    backgroundColor: c.card,
     borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: c.border,
     alignItems: 'center', gap: spacing.sm,
   },
   emptyIcon: {
     width: 64, height: 64, borderRadius: 32,
     alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs,
   },
-  emptyTitle: { fontSize: fontSize.base, fontWeight: '700', color: colors.textPrimary },
-  emptyText: { fontSize: fontSize.sm, color: colors.textMuted },
+  emptyTitle: { fontSize: fontSize.base, fontWeight: '700', color: c.textPrimary },
+  emptyText: { fontSize: fontSize.sm, color: c.textMuted },
 
   // ── Payments ──
   paymentGroup: {
     marginHorizontal: screenPadding,
-    backgroundColor: colors.card,
+    backgroundColor: c.card,
     borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: c.border,
     overflow: 'hidden',
   },
   paymentRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingHorizontal: spacing.base, paddingVertical: spacing.md,
   },
-  paymentRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  paymentRowBorder: { borderBottomWidth: 1, borderBottomColor: c.border },
   paymentIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   paymentMeta: { flex: 1, gap: 2 },
-  paymentBene: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
-  paymentRoute: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '500' },
-  paymentTime: { fontSize: fontSize.xs, color: colors.textMuted },
+  paymentBene: { fontSize: fontSize.sm, fontWeight: '600', color: c.textPrimary },
+  paymentRoute: { fontSize: fontSize.xs, color: c.textSecondary, fontWeight: '500' },
+  paymentTime: { fontSize: fontSize.xs, color: c.textMuted },
   paymentRight: { alignItems: 'flex-end', gap: 5, flexShrink: 0 },
-  paymentAmt: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
+  paymentAmt: { fontSize: fontSize.sm, fontWeight: '700', color: c.textPrimary },
 
   bottomSpacer: { height: spacing.xl },
 })

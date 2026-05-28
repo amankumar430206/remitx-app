@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useQuery } from '@tanstack/react-query'
 import paymentsApi, { type Payment } from '@/api/payments'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo, statusColor } from '@/utils/format'
 import { StatusBadge } from '@/components/ui/Badge'
@@ -75,7 +75,13 @@ function groupByDate(payments: Payment[]): Section[] {
 
 // ─── PaymentRow ───────────────────────────────────────────────────────────────
 
-function PaymentRow({ item, isLast, onPress }: { item: Payment; isLast: boolean; onPress: () => void }) {
+function PaymentRow({ item, isLast, onPress, s, colors }: {
+  item: Payment
+  isLast: boolean
+  onPress: () => void
+  s: ReturnType<typeof createStyles>
+  colors: Colors
+}) {
   const sc = statusColor(item.status)
   return (
     <TouchableOpacity
@@ -108,6 +114,9 @@ function PaymentRow({ item, isLast, onPress }: { item: Payment; isLast: boolean;
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PaymentHistory() {
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
+
   const [selected, setSelected]         = useState<Payment | null>(null)
   const [showNew, setShowNew]           = useState(false)
   const [newPaymentKey, setNewPaymentKey] = useState(0)
@@ -149,7 +158,7 @@ export function PaymentHistory() {
   })
 
   const sections  = useMemo(() => groupByDate(data ?? []), [data])
-  const totalVol  = useMemo(() => (data ?? []).reduce((s, p) => s + parseFloat(p.source_amount ?? '0'), 0), [data])
+  const totalVol  = useMemo(() => (data ?? []).reduce((sum, p) => sum + parseFloat(p.source_amount ?? '0'), 0), [data])
   const completedCount = (data ?? []).filter((p) => p.status === 'completed').length
 
   const openNew = () => { setNewPaymentKey(k => k + 1); setShowNew(true) }
@@ -327,6 +336,8 @@ export function PaymentHistory() {
                     item={item}
                     isLast={idx === section.data.length - 1}
                     onPress={() => setSelected(item)}
+                    s={s}
+                    colors={colors}
                   />
                 ))}
               </View>
@@ -387,41 +398,41 @@ export function PaymentHistory() {
   )
 }
 
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
 
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.sm,
   },
-  title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
-  subtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  title: { fontSize: fontSize.xl, fontWeight: '800', color: c.textPrimary },
+  subtitle: { fontSize: fontSize.xs, color: c.textMuted, marginTop: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   filterBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: c.surface, borderWidth: 1, borderColor: c.border,
     alignItems: 'center', justifyContent: 'center',
   },
   filterBtnActive: {
-    backgroundColor: colors.primaryFaded, borderColor: colors.primary + '60',
+    backgroundColor: c.primaryFaded, borderColor: c.primary + '60',
   },
   filterDot: {
     position: 'absolute', top: 6, right: 6,
     width: 7, height: 7, borderRadius: 3.5,
-    backgroundColor: colors.primary, borderWidth: 1.5, borderColor: colors.bg,
+    backgroundColor: c.primary, borderWidth: 1.5, borderColor: c.bg,
   },
   newBtn: { borderRadius: radius.full, overflow: 'hidden' },
   newBtnGrad: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
   },
-  newBtnText: { fontSize: fontSize.sm, fontWeight: '700', color: colors.white },
+  newBtnText: { fontSize: fontSize.sm, fontWeight: '700', color: c.white },
 
   // Filter panel
   filterPanel: {
-    backgroundColor: colors.card,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    backgroundColor: c.card,
+    borderBottomWidth: 1, borderBottomColor: c.border,
     paddingBottom: spacing.md, gap: spacing.sm,
   },
   presetRow: {
@@ -429,13 +440,13 @@ const s = StyleSheet.create({
     paddingHorizontal: screenPadding, paddingTop: spacing.sm,
   },
   chip: {
-    borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.full, borderWidth: 1, borderColor: c.border,
     paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
   },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.textMuted },
-  chipTextActive: { color: colors.white },
+  chipActive: { backgroundColor: c.primary, borderColor: c.primary },
+  chipText: { fontSize: fontSize.xs, fontWeight: '600', color: c.textMuted },
+  chipTextActive: { color: c.white },
 
   // Custom date range
   dateRow: {
@@ -444,11 +455,11 @@ const s = StyleSheet.create({
   },
   dateBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.primaryFaded, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.primary + '40',
+    backgroundColor: c.primaryFaded, borderRadius: radius.md,
+    borderWidth: 1, borderColor: c.primary + '40',
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
   },
-  dateBtnText: { fontSize: fontSize.xs, fontWeight: '600', color: colors.primary, flex: 1 },
+  dateBtnText: { fontSize: fontSize.xs, fontWeight: '600', color: c.primary, flex: 1 },
 
   // Active range summary
   filterFooter: {
@@ -456,21 +467,21 @@ const s = StyleSheet.create({
     paddingHorizontal: screenPadding,
   },
   activeRangeWrap: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  activeRange: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '500' },
-  clearText: { fontSize: fontSize.xs, color: colors.danger, fontWeight: '600' },
+  activeRange: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '500' },
+  clearText: { fontSize: fontSize.xs, color: c.danger, fontWeight: '600' },
 
   // Stats strip
   statsRow: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: screenPadding, marginTop: spacing.sm, marginBottom: spacing.sm,
-    backgroundColor: colors.card,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: c.card,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: c.border,
     paddingVertical: spacing.md,
   },
   statCard: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: fontSize.lg, fontWeight: '800', color: colors.textPrimary },
-  statLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
-  statDivider: { width: 1, height: 32, backgroundColor: colors.border },
+  statValue: { fontSize: fontSize.lg, fontWeight: '800', color: c.textPrimary },
+  statLabel: { fontSize: fontSize.xs, color: c.textMuted, marginTop: 2 },
+  statDivider: { width: 1, height: 32, backgroundColor: c.border },
 
   // List
   scroll: { paddingBottom: spacing['3xl'], gap: spacing.xs },
@@ -480,48 +491,48 @@ const s = StyleSheet.create({
     paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
   sectionLabel: {
-    fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted,
+    fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
     letterSpacing: 0.5, textTransform: 'uppercase',
   },
-  sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  sectionLine: { flex: 1, height: 1, backgroundColor: c.border },
   group: {
     marginHorizontal: screenPadding,
-    backgroundColor: colors.card,
+    backgroundColor: c.card,
     borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: c.border,
     overflow: 'hidden',
   },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingHorizontal: spacing.base, paddingVertical: spacing.md,
   },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: c.border },
   rowIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   rowMeta: { flex: 1, gap: 3 },
-  rowBene: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
+  rowBene: { fontSize: fontSize.sm, fontWeight: '600', color: c.textPrimary },
   rowSubRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rowRoute: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '500' },
-  rowDot: { color: colors.textDisabled, fontSize: fontSize.xs },
-  rowTime: { fontSize: fontSize.xs, color: colors.textMuted },
+  rowRoute: { fontSize: fontSize.xs, color: c.textSecondary, fontWeight: '500' },
+  rowDot: { color: c.textDisabled, fontSize: fontSize.xs },
+  rowTime: { fontSize: fontSize.xs, color: c.textMuted },
   rowRight: { alignItems: 'flex-end', gap: 3, flexShrink: 0 },
-  rowAmt: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
-  rowDestAmt: { fontSize: fontSize.xs, color: colors.textMuted },
+  rowAmt: { fontSize: fontSize.sm, fontWeight: '700', color: c.textPrimary },
+  rowDestAmt: { fontSize: fontSize.xs, color: c.textMuted },
 
   // iOS date picker sheet
   iosPickerOverlay: {
     flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)',
   },
   iosPickerSheet: {
-    backgroundColor: colors.card,
+    backgroundColor: c.card,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
     paddingBottom: spacing['3xl'], overflow: 'hidden',
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: c.border,
   },
   iosPickerHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: screenPadding, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    borderBottomWidth: 1, borderBottomColor: c.border,
   },
-  iosPickerLabel: { fontSize: fontSize.base, fontWeight: '700', color: colors.textPrimary },
-  iosPickerDone: { fontSize: fontSize.base, fontWeight: '700', color: colors.primary },
+  iosPickerLabel: { fontSize: fontSize.base, fontWeight: '700', color: c.textPrimary },
+  iosPickerDone: { fontSize: fontSize.base, fontWeight: '700', color: c.primary },
 })

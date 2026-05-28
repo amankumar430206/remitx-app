@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, ActivityIndicator, Modal,
@@ -11,7 +11,7 @@ import beneficiariesApi, { type Beneficiary } from '@/api/beneficiaries'
 import fxApi, { type FxQuote } from '@/api/fx'
 import paymentsApi, { type FeePreview } from '@/api/payments'
 import accountsApi from '@/api/accounts'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius } from '@/theme/spacing'
 import { formatMoney, generateIdempotencyKey, currencyColor } from '@/utils/format'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -29,8 +29,22 @@ interface Props { onClose: () => void }
 
 const PURPOSE_CODES = ['TRADE', 'SUPPLIER', 'SALARY', 'SERVICES', 'CONTRACTOR', 'OTHER']
 
+function StepBar({ current }: { current: number }) {
+  const colors = useColors()
+  const bar = useMemo(() => createBarStyles(colors), [colors])
+  return (
+    <View style={bar.wrap}>
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={[bar.seg, i <= current && bar.segActive]} />
+      ))}
+    </View>
+  )
+}
+
 export function NewPayment({ onClose }: Props) {
   const { showAlert } = useAlert()
+  const colors = useColors()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const { isOnline } = useNetworkStatus()
   const qc = useQueryClient()
   const [step, setStep] = useState<Step>('beneficiary')
@@ -344,101 +358,92 @@ export function NewPayment({ onClose }: Props) {
   )
 }
 
-function StepBar({ current }: { current: number }) {
-  return (
-    <View style={bar.wrap}>
-      {[0, 1, 2].map((i) => (
-        <View key={i} style={[bar.seg, i <= current && bar.segActive]} />
-      ))}
-    </View>
-  )
-}
-
-const bar = StyleSheet.create({
+const createBarStyles = (c: Colors) => StyleSheet.create({
   wrap: { flexDirection: 'row', gap: 4, paddingHorizontal: spacing.base, paddingBottom: spacing.sm },
-  seg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.border },
-  segActive: { backgroundColor: colors.primary },
+  seg: { flex: 1, height: 3, borderRadius: 2, backgroundColor: c.border },
+  segActive: { backgroundColor: c.primary },
 })
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   scroll: { padding: spacing.xl, gap: spacing.base, paddingBottom: spacing['3xl'] },
   loader: { marginTop: spacing['2xl'] },
 
   beneRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.card, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, padding: spacing.base, marginBottom: spacing.sm,
+    backgroundColor: c.card, borderRadius: radius.md,
+    borderWidth: 1, borderColor: c.border, padding: spacing.base, marginBottom: spacing.sm,
   },
   beneAvatar: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: c.primaryFaded, alignItems: 'center', justifyContent: 'center',
   },
-  beneAvatarText: { fontSize: fontSize.lg, fontWeight: '700', color: colors.primary },
+  beneAvatarText: { fontSize: fontSize.lg, fontWeight: '700', color: c.primary },
   beneMeta: { flex: 1 },
-  beneName: { fontSize: fontSize.base, fontWeight: '600', color: colors.textPrimary },
-  beneInfo: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: 2 },
+  beneName: { fontSize: fontSize.base, fontWeight: '600', color: c.textPrimary },
+  beneInfo: { fontSize: fontSize.sm, color: c.textMuted, marginTop: 2 },
+
   // Empty state
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
   emptyIconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
-  emptyTitle: { fontSize: fontSize.lg, fontWeight: '800', color: colors.textPrimary },
-  emptySubtitle: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20, paddingHorizontal: spacing.xl },
+  emptyTitle: { fontSize: fontSize.lg, fontWeight: '800', color: c.textPrimary },
+  emptySubtitle: { fontSize: fontSize.sm, color: c.textMuted, textAlign: 'center', lineHeight: 20, paddingHorizontal: spacing.xl },
   emptyCtaWrap: { borderRadius: radius.full, overflow: 'hidden', marginTop: spacing.sm },
   emptyCta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.xl },
-  emptyCtaText: { fontSize: fontSize.base, fontWeight: '700', color: colors.white },
+  emptyCtaText: { fontSize: fontSize.base, fontWeight: '700', color: c.white },
 
   addBeneRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.primary + '40',
+    borderRadius: radius.md, borderWidth: 1.5, borderColor: c.primary + '40',
     borderStyle: 'dashed', padding: spacing.base, marginBottom: spacing.sm,
-    backgroundColor: colors.primaryFaded,
+    backgroundColor: c.primaryFaded,
   },
-  addBeneIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center' },
-  addBeneText: { fontSize: fontSize.base, fontWeight: '600', color: colors.primary },
+  addBeneIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.primaryFaded, alignItems: 'center', justifyContent: 'center' },
+  addBeneText: { fontSize: fontSize.base, fontWeight: '600', color: c.primary },
 
   beneCard: { marginBottom: spacing.xs },
-  fieldLabel: { fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing.xs },
+  fieldLabel: { fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing.xs },
 
   amountWrap: { gap: spacing.xs },
-  amountRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.primary, paddingHorizontal: spacing.base, minHeight: 64 },
-  currencySymbol: { fontSize: fontSize['2xl'], fontWeight: '300', color: colors.textMuted, marginRight: spacing.sm },
-  amountInput: { flex: 1, fontSize: fontSize['3xl'], fontWeight: '700', color: colors.textPrimary },
+  amountRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1.5, borderColor: c.primary, paddingHorizontal: spacing.base, minHeight: 64 },
+  currencySymbol: { fontSize: fontSize['2xl'], fontWeight: '300', color: c.textMuted, marginRight: spacing.sm },
+  amountInput: { flex: 1, fontSize: fontSize['3xl'], fontWeight: '700', color: c.textPrimary },
 
   purposeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  purposeChip: { borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
-  purposeChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  purposeChipText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: '500' },
-  purposeChipTextActive: { color: colors.white },
+  purposeChip: { borderRadius: radius.full, borderWidth: 1, borderColor: c.border, paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
+  purposeChipActive: { backgroundColor: c.primary, borderColor: c.primary },
+  purposeChipText: { fontSize: fontSize.sm, color: c.textMuted, fontWeight: '500' },
+  purposeChipTextActive: { color: c.white },
 
   timerBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.warningFaded, borderRadius: radius.md,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.warning + '44',
+    backgroundColor: c.warningFaded, borderRadius: radius.md,
+    padding: spacing.md, borderWidth: 1, borderColor: c.warning + '44',
   },
-  timerBannerUrgent: { backgroundColor: colors.dangerFaded, borderColor: colors.danger + '44' },
-  timerText: { fontSize: fontSize.sm, fontWeight: '600', color: colors.warning },
-  timerTextUrgent: { color: colors.danger },
+  timerBannerUrgent: { backgroundColor: c.dangerFaded, borderColor: c.danger + '44' },
+  timerText: { fontSize: fontSize.sm, fontWeight: '600', color: c.warning },
+  timerTextUrgent: { color: c.danger },
 
   reviewCard: { gap: spacing.sm },
   reviewRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border,
+    paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: c.border,
   },
   reviewRowTotal: {
     borderBottomWidth: 0, marginTop: spacing.xs,
-    backgroundColor: colors.primaryFaded, borderRadius: radius.sm,
+    backgroundColor: c.primaryFaded, borderRadius: radius.sm,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.sm,
   },
-  reviewLabel: { fontSize: fontSize.sm, color: colors.textMuted },
-  reviewLabelTotal: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
-  reviewValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flex: 1, marginLeft: spacing.md },
-  reviewValueTotal: { fontSize: fontSize.base, fontWeight: '800', color: colors.primary },
+  reviewLabel: { fontSize: fontSize.sm, color: c.textMuted },
+  reviewLabelTotal: { fontSize: fontSize.sm, fontWeight: '700', color: c.textPrimary },
+  reviewValue: { fontSize: fontSize.sm, fontWeight: '600', color: c.textPrimary, textAlign: 'right', flex: 1, marginLeft: spacing.md },
+  reviewValueTotal: { fontSize: fontSize.base, fontWeight: '800', color: c.primary },
 
   actionBtn: { marginTop: spacing.sm },
   cancelBtn: { marginTop: spacing.xs },
 
   doneContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.base },
-  doneIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.successFaded, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
-  doneTitle: { fontSize: fontSize['2xl'], fontWeight: '800', color: colors.textPrimary },
-  doneSub: { fontSize: fontSize.md, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  doneIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: c.successFaded, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  doneTitle: { fontSize: fontSize['2xl'], fontWeight: '800', color: c.textPrimary },
+  doneSub: { fontSize: fontSize.md, color: c.textMuted, textAlign: 'center', lineHeight: 22 },
 })

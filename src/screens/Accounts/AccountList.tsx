@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, RefreshControl, Modal, Animated, ActivityIndicator,
@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useQuery } from '@tanstack/react-query'
 import accountsApi, { type Account } from '@/api/accounts'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, currencyColor } from '@/utils/format'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -27,7 +27,12 @@ function cardGradient(currency: string): readonly [string, string, string] {
   return CARD_GRADIENTS[currency.toUpperCase()] ?? CARD_GRADIENTS.DEFAULT
 }
 
-function AccountCard({ account, onPress }: { account: Account; onPress: () => void }) {
+function AccountCard({ account, onPress, s, colors }: {
+  account: Account
+  onPress: () => void
+  s: ReturnType<typeof createStyles>
+  colors: Colors
+}) {
   const scale = new Animated.Value(1)
   const cc = currencyColor(account.currency)
   const grad = cardGradient(account.currency)
@@ -41,36 +46,36 @@ function AccountCard({ account, onPress }: { account: Account; onPress: () => vo
   return (
     <TouchableOpacity onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} activeOpacity={1}>
       <Animated.View style={{ transform: [{ scale }] }}>
-        <LinearGradient colors={grad} style={styles.card} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <View style={[styles.circle1, { backgroundColor: cc + '10' }]} />
-          <View style={[styles.circle2, { backgroundColor: cc + '07' }]} />
+        <LinearGradient colors={grad} style={s.card} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <View style={[s.circle1, { backgroundColor: cc + '10' }]} />
+          <View style={[s.circle2, { backgroundColor: cc + '07' }]} />
 
-          <View style={styles.cardHeader}>
-            <View style={[styles.ccyBadge, { backgroundColor: cc + '25', borderColor: cc + '40' }]}>
-              <Text style={[styles.ccyText, { color: cc }]}>{account.currency}</Text>
+          <View style={s.cardHeader}>
+            <View style={[s.ccyBadge, { backgroundColor: cc + '25', borderColor: cc + '40' }]}>
+              <Text style={[s.ccyText, { color: cc }]}>{account.currency}</Text>
             </View>
-            <View style={styles.statusChip}>
-              <View style={[styles.statusDot, { backgroundColor: account.status === 'active' ? '#10B981' : colors.textDisabled }]} />
-              <Text style={styles.statusText}>{account.status === 'active' ? 'Active' : 'Inactive'}</Text>
+            <View style={s.statusChip}>
+              <View style={[s.statusDot, { backgroundColor: account.status === 'active' ? '#10B981' : colors.textDisabled }]} />
+              <Text style={s.statusText}>{account.status === 'active' ? 'Active' : 'Inactive'}</Text>
             </View>
           </View>
 
-          <Text style={styles.balanceLabel}>Available balance</Text>
-          <View style={styles.balanceRow}>
-            <Text style={styles.balanceWhole}>{whole}</Text>
-            <Text style={styles.balanceCents}>{cents}</Text>
+          <Text style={s.balanceLabel}>Available balance</Text>
+          <View style={s.balanceRow}>
+            <Text style={s.balanceWhole}>{whole}</Text>
+            <Text style={s.balanceCents}>{cents}</Text>
           </View>
 
-          <View style={styles.cardFooter}>
+          <View style={s.cardFooter}>
             <View>
               {account.account_number ? (
-                <Text style={styles.cardNum}>···· {account.account_number.slice(-4)}</Text>
+                <Text style={s.cardNum}>···· {account.account_number.slice(-4)}</Text>
               ) : (
-                <Text style={styles.cardNum}>{account.provider_name ?? 'Account'}</Text>
+                <Text style={s.cardNum}>{account.provider_name ?? 'Account'}</Text>
               )}
-              <Text style={styles.cardSub}>Tap to view ledger</Text>
+              <Text style={s.cardSub}>Tap to view ledger</Text>
             </View>
-            <View style={styles.chevronWrap}>
+            <View style={s.chevronWrap}>
               <Ionicons name="chevron-forward" size={16} color={colors.white + '60'} />
             </View>
           </View>
@@ -81,6 +86,8 @@ function AccountCard({ account, onPress }: { account: Account; onPress: () => vo
 }
 
 export function AccountList() {
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
   const [selected, setSelected] = useState<Account | null>(null)
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
@@ -90,28 +97,28 @@ export function AccountList() {
 
   const totalAccounts = (data ?? []).length
   const activeAccounts = (data ?? []).filter((a) => a.status === 'active').length
-  const totalUsd = (data ?? []).reduce((s, a) => s + parseFloat(a.balance ?? '0'), 0)
+  const totalUsd = (data ?? []).reduce((sum, a) => sum + parseFloat(a.balance ?? '0'), 0)
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.header}>
         <View>
-          <Text style={styles.title}>Accounts</Text>
+          <Text style={s.title}>Accounts</Text>
           {totalAccounts > 0 && (
-            <Text style={styles.subtitle}>{activeAccounts} of {totalAccounts} active</Text>
+            <Text style={s.subtitle}>{activeAccounts} of {totalAccounts} active</Text>
           )}
         </View>
-        <View style={styles.headerRight}>
+        <View style={s.headerRight}>
           {totalAccounts > 0 && (
-            <View style={styles.totalWrap}>
-              <Text style={styles.totalLabel}>Total balance</Text>
-              <Text style={styles.totalValue}>${Math.floor(totalUsd).toLocaleString()}</Text>
+            <View style={s.totalWrap}>
+              <Text style={s.totalLabel}>Total balance</Text>
+              <Text style={s.totalValue}>${Math.floor(totalUsd).toLocaleString()}</Text>
             </View>
           )}
           <TouchableOpacity
             onPress={() => refetch()}
             disabled={isRefetching}
-            style={styles.refreshBtn}
+            style={s.refreshBtn}
             activeOpacity={0.7}
           >
             {isRefetching
@@ -125,7 +132,7 @@ export function AccountList() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={s.scroll}
       >
         {(data ?? []).length === 0 && !isLoading ? (
           <EmptyState
@@ -135,7 +142,7 @@ export function AccountList() {
           />
         ) : (
           (data ?? []).map((acc) => (
-            <AccountCard key={acc.id} account={acc} onPress={() => setSelected(acc)} />
+            <AccountCard key={acc.id} account={acc} onPress={() => setSelected(acc)} s={s} colors={colors} />
           ))
         )}
       </ScrollView>
@@ -147,23 +154,24 @@ export function AccountList() {
   )
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.lg,
   },
-  title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
-  subtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  title: { fontSize: fontSize.xl, fontWeight: '800', color: c.textPrimary },
+  subtitle: { fontSize: fontSize.xs, color: c.textMuted, marginTop: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   totalWrap: { alignItems: 'flex-end' },
-  refreshBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-  totalLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  totalValue: { fontSize: fontSize.lg, fontWeight: '800', color: colors.textPrimary },
+  refreshBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
+  totalLabel: { fontSize: fontSize.xs, color: c.textMuted },
+  totalValue: { fontSize: fontSize.lg, fontWeight: '800', color: c.textPrimary },
 
   scroll: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'], gap: spacing.md },
 
+  // Card styles (used by AccountCard sub-component)
   card: {
     borderRadius: radius.xl + 2,
     padding: spacing.lg,
@@ -179,15 +187,15 @@ const styles = StyleSheet.create({
   ccyText: { fontSize: fontSize.sm, fontWeight: '900', letterSpacing: 1 },
   statusChip: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: fontSize.xs, color: colors.white + '60', fontWeight: '500' },
+  statusText: { fontSize: fontSize.xs, color: c.white + '60', fontWeight: '500' },
 
-  balanceLabel: { fontSize: fontSize.xs, color: colors.white + '50', letterSpacing: 0.5, marginBottom: 6 },
+  balanceLabel: { fontSize: fontSize.xs, color: c.white + '50', letterSpacing: 0.5, marginBottom: 6 },
   balanceRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: spacing.xl },
-  balanceWhole: { fontSize: 34, fontWeight: '800', color: colors.white, letterSpacing: -1.2 },
-  balanceCents: { fontSize: fontSize.lg, fontWeight: '400', color: colors.white + '65', marginBottom: 4, marginLeft: 2 },
+  balanceWhole: { fontSize: 34, fontWeight: '800', color: c.white, letterSpacing: -1.2 },
+  balanceCents: { fontSize: fontSize.lg, fontWeight: '400', color: c.white + '65', marginBottom: 4, marginLeft: 2 },
 
   cardFooter: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  cardNum: { fontSize: fontSize.xs, color: colors.white + '45', letterSpacing: 2, fontWeight: '500', marginBottom: 2 },
-  cardSub: { fontSize: 10, color: colors.white + '30' },
-  chevronWrap: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.white + '10', alignItems: 'center', justifyContent: 'center' },
+  cardNum: { fontSize: fontSize.xs, color: c.white + '45', letterSpacing: 2, fontWeight: '500', marginBottom: 2 },
+  cardSub: { fontSize: 10, color: c.white + '30' },
+  chevronWrap: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.white + '10', alignItems: 'center', justifyContent: 'center' },
 })

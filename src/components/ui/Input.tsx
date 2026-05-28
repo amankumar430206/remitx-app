@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   View,
   TextInput,
@@ -8,7 +8,7 @@ import {
   type TextInputProps,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { radius, spacing, fontSize } from '@/theme/spacing'
 
 interface InputProps extends TextInputProps {
@@ -19,18 +19,20 @@ interface InputProps extends TextInputProps {
 }
 
 export function Input({ label, error, hint, leftIcon, secureTextEntry, style, ...rest }: InputProps) {
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
   const [hidden, setHidden] = useState(secureTextEntry ?? false)
   const [focused, setFocused] = useState(false)
 
   return (
-    <View style={styles.wrapper}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputRow, focused && styles.focused, error && styles.errored]}>
+    <View style={s.wrapper}>
+      {label && <Text style={s.label}>{label}</Text>}
+      <View style={[s.inputRow, focused && s.focused, error && s.errored]}>
         {leftIcon && (
-          <Ionicons name={leftIcon} size={18} color={colors.textMuted} style={styles.leftIcon} />
+          <Ionicons name={leftIcon} size={18} color={colors.textMuted} style={s.leftIcon} />
         )}
         <TextInput
-          style={[styles.input, style]}
+          style={[s.input, style]}
           placeholderTextColor={colors.textDisabled}
           selectionColor={colors.primary}
           secureTextEntry={hidden}
@@ -40,7 +42,7 @@ export function Input({ label, error, hint, leftIcon, secureTextEntry, style, ..
           {...rest}
         />
         {secureTextEntry && (
-          <TouchableOpacity onPress={() => setHidden((h) => !h)} style={styles.eye}>
+          <TouchableOpacity onPress={() => setHidden((h) => !h)} style={s.eye}>
             <Ionicons
               name={hidden ? 'eye-off-outline' : 'eye-outline'}
               size={18}
@@ -49,40 +51,40 @@ export function Input({ label, error, hint, leftIcon, secureTextEntry, style, ..
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text style={styles.error}>{error}</Text>}
-      {hint && !error && <Text style={styles.hint}>{hint}</Text>}
+      {error && <Text style={s.error}>{error}</Text>}
+      {hint && !error && <Text style={s.hint}>{hint}</Text>}
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Colors) => StyleSheet.create({
   wrapper: { gap: spacing.xs },
   label: {
     fontSize: fontSize.sm,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: c.textSecondary,
     letterSpacing: 0.2,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.md,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing.base,
     minHeight: 52,
   },
-  focused: { borderColor: colors.primary, backgroundColor: colors.primaryFaded + '33' },
-  errored: { borderColor: colors.danger },
+  focused: { borderColor: c.primary, backgroundColor: c.primaryFaded + '33' },
+  errored: { borderColor: c.danger },
   leftIcon: { marginRight: spacing.sm },
   input: {
     flex: 1,
     fontSize: fontSize.md,
-    color: colors.textPrimary,
+    color: c.textPrimary,
     paddingVertical: spacing.sm,
   },
   eye: { paddingLeft: spacing.sm },
-  error: { fontSize: fontSize.xs, color: colors.danger },
-  hint: { fontSize: fontSize.xs, color: colors.textMuted },
+  error: { fontSize: fontSize.xs, color: c.danger },
+  hint: { fontSize: fontSize.xs, color: c.textMuted },
 })

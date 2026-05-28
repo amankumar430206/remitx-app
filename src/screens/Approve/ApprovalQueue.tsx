@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, Modal, TextInput, ActivityIndicator,
@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import paymentsApi, { type Payment } from '@/api/payments'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo } from '@/utils/format'
 import { getApiError } from '@/utils/apiError'
@@ -17,6 +17,9 @@ import { EmptyState } from '@/components/ui/EmptyState'
 
 export function ApprovalQueue() {
   const { showAlert } = useAlert()
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
+  const sh = useMemo(() => createSheetStyles(colors), [colors])
   const qc = useQueryClient()
   const [selected, setSelected] = useState<Payment | null>(null)
   const [comment, setComment] = useState('')
@@ -51,18 +54,18 @@ export function ApprovalQueue() {
   const isApproving = action === 'approve'
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.title}>Approval Queue</Text>
+      <View style={s.header}>
+        <View style={s.headerLeft}>
+          <Text style={s.title}>Approval Queue</Text>
           {queue.length > 0 && (
-            <Text style={styles.subtitle}>{queue.length} pending</Text>
+            <Text style={s.subtitle}>{queue.length} pending</Text>
           )}
         </View>
         {queue.length > 0 && (
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>{queue.length}</Text>
+          <View style={s.countBadge}>
+            <Text style={s.countText}>{queue.length}</Text>
           </View>
         )}
       </View>
@@ -73,7 +76,7 @@ export function ApprovalQueue() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={s.scroll}
         >
           {queue.length === 0 ? (
             <EmptyState
@@ -82,69 +85,69 @@ export function ApprovalQueue() {
               subtitle="No payments awaiting your approval"
             />
           ) : (
-            <View style={styles.group}>
+            <View style={s.group}>
               {queue.map((item, idx) => {
                 const isLast = idx === queue.length - 1
                 const initial = (item.beneficiary_name ?? 'B')[0].toUpperCase()
                 return (
-                  <View key={item.id} style={[styles.card, !isLast && styles.cardBorder]}>
+                  <View key={item.id} style={[s.card, !isLast && s.cardBorder]}>
                     {/* Warning accent bar */}
-                    <View style={styles.accentBar} />
+                    <View style={s.accentBar} />
 
                     {/* Top row: avatar + bene + amount */}
-                    <View style={styles.cardTop}>
-                      <View style={styles.avatarWrap}>
-                        <Text style={styles.avatarText}>{initial}</Text>
+                    <View style={s.cardTop}>
+                      <View style={s.avatarWrap}>
+                        <Text style={s.avatarText}>{initial}</Text>
                       </View>
-                      <View style={styles.cardMeta}>
-                        <Text style={styles.beneName} numberOfLines={1}>
+                      <View style={s.cardMeta}>
+                        <Text style={s.beneName} numberOfLines={1}>
                           {item.beneficiary_name ?? 'Beneficiary'}
                         </Text>
-                        <View style={styles.cardSubRow}>
-                          <Text style={styles.cardRoute}>
+                        <View style={s.cardSubRow}>
+                          <Text style={s.cardRoute}>
                             {item.source_currency} → {item.dest_currency}
                           </Text>
-                          <Text style={styles.cardDot}>·</Text>
-                          <Text style={styles.cardTime}>{formatTimeAgo(item.created_at)}</Text>
+                          <Text style={s.cardDot}>·</Text>
+                          <Text style={s.cardTime}>{formatTimeAgo(item.created_at)}</Text>
                         </View>
                       </View>
-                      <View style={styles.amountCol}>
-                        <Text style={styles.amount}>{formatMoney(item.source_amount, item.source_currency)}</Text>
-                        <Text style={styles.destAmount}>{formatMoney(item.dest_amount, item.dest_currency)}</Text>
+                      <View style={s.amountCol}>
+                        <Text style={s.amount}>{formatMoney(item.source_amount, item.source_currency)}</Text>
+                        <Text style={s.destAmount}>{formatMoney(item.dest_amount, item.dest_currency)}</Text>
                       </View>
                     </View>
 
                     {/* Meta chips */}
-                    <View style={styles.chips}>
-                      <View style={styles.chip}>
+                    <View style={s.chips}>
+                      <View style={s.chip}>
                         <Ionicons name="briefcase-outline" size={11} color={colors.textMuted} />
-                        <Text style={styles.chipText}>{item.purpose_code}</Text>
+                        <Text style={s.chipText}>{item.purpose_code}</Text>
                       </View>
                       {item.reference && (
-                        <View style={styles.chip}>
+                        <View style={s.chip}>
                           <Ionicons name="document-text-outline" size={11} color={colors.textMuted} />
-                          <Text style={styles.chipText}>{item.reference}</Text>
+                          <Text style={s.chipText}>{item.reference}</Text>
                         </View>
                       )}
                     </View>
 
                     {/* Actions */}
-                    <View style={styles.actions}>
+                    <View style={s.actions}>
                       <TouchableOpacity
-                        style={[styles.actionBtn, styles.rejectBtn]}
+                        style={[s.actionBtn, s.rejectBtn]}
                         onPress={() => openAction(item, 'reject')}
                         activeOpacity={0.8}
                       >
                         <Ionicons name="close" size={15} color={colors.danger} />
-                        <Text style={[styles.actionText, { color: colors.danger }]}>Reject</Text>
+                        <Text style={[s.actionText, { color: colors.danger }]}>Reject</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.actionBtn, styles.approveBtn]}
+                        style={[s.actionBtn, s.approveBtn]}
                         onPress={() => openAction(item, 'approve')}
                         activeOpacity={0.8}
                       >
                         <Ionicons name="checkmark" size={15} color={colors.success} />
-                        <Text style={[styles.actionText, { color: colors.success }]}>Approve</Text>
+                        <Text style={[s.actionText, { color: colors.success }]}>Approve</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -157,24 +160,24 @@ export function ApprovalQueue() {
 
       {/* Action sheet */}
       <Modal visible={!!selected && !!action} animationType="slide" presentationStyle="pageSheet" transparent onRequestClose={closeModal}>
-        <View style={sheet.overlay}>
-          <View style={sheet.container}>
-            <View style={sheet.handle} />
-            <View style={[sheet.iconWrap, { backgroundColor: isApproving ? colors.successFaded : colors.dangerFaded }]}>
+        <View style={sh.overlay}>
+          <View style={sh.container}>
+            <View style={sh.handle} />
+            <View style={[sh.iconWrap, { backgroundColor: isApproving ? colors.successFaded : colors.dangerFaded }]}>
               <Ionicons
                 name={isApproving ? 'checkmark-circle' : 'close-circle'}
                 size={32}
                 color={isApproving ? colors.success : colors.danger}
               />
             </View>
-            <Text style={sheet.heading}>{isApproving ? 'Approve payment' : 'Reject payment'}</Text>
-            <Text style={sheet.sub}>
+            <Text style={sh.heading}>{isApproving ? 'Approve payment' : 'Reject payment'}</Text>
+            <Text style={sh.sub}>
               {isApproving
                 ? `Approve ${formatMoney(selected?.source_amount ?? '0', selected?.source_currency ?? 'USD')} to ${selected?.beneficiary_name}?`
                 : 'Reject this payment? Please provide a reason.'}
             </Text>
             <TextInput
-              style={sheet.input}
+              style={sh.input}
               value={comment}
               onChangeText={setComment}
               placeholder={isApproving ? 'Add a note (optional)' : 'Reason for rejection (required)'}
@@ -182,15 +185,15 @@ export function ApprovalQueue() {
               multiline
               numberOfLines={3}
             />
-            <View style={sheet.btnRow}>
-              <Button label="Cancel" variant="outline" onPress={closeModal} style={sheet.btn} />
+            <View style={sh.btnRow}>
+              <Button label="Cancel" variant="outline" onPress={closeModal} style={sh.btn} />
               <Button
                 label={isApproving ? 'Approve' : 'Reject'}
                 variant={isApproving ? 'primary' : 'danger'}
                 loading={approveMutation.isPending || rejectMutation.isPending}
                 disabled={!isApproving && !comment.trim()}
                 onPress={() => isApproving ? approveMutation.mutate() : rejectMutation.mutate()}
-                style={sheet.btn}
+                style={sh.btn}
               />
             </View>
           </View>
@@ -200,65 +203,63 @@ export function ApprovalQueue() {
   )
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.md,
   },
   headerLeft: {},
-  title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
-  subtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  title: { fontSize: fontSize.xl, fontWeight: '800', color: c.textPrimary },
+  subtitle: { fontSize: fontSize.xs, color: c.textMuted, marginTop: 2 },
   countBadge: {
-    backgroundColor: colors.warning + '22', borderRadius: radius.full,
-    borderWidth: 1, borderColor: colors.warning + '44',
+    backgroundColor: c.warning + '22', borderRadius: radius.full,
+    borderWidth: 1, borderColor: c.warning + '44',
     minWidth: 28, height: 28, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.sm,
   },
-  countText: { fontSize: fontSize.xs, fontWeight: '800', color: colors.warning },
+  countText: { fontSize: fontSize.xs, fontWeight: '800', color: c.warning },
 
   scroll: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
 
-  // Grouped card container
   group: {
-    backgroundColor: colors.card,
+    backgroundColor: c.card,
     borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: c.border,
     overflow: 'hidden',
   },
 
-  // Individual queue item (richer card with actions)
   card: {
     paddingHorizontal: spacing.base, paddingVertical: spacing.md,
     gap: spacing.sm, position: 'relative',
   },
-  cardBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  accentBar: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 3, backgroundColor: colors.warning },
+  cardBorder: { borderBottomWidth: 1, borderBottomColor: c.border },
+  accentBar: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 3, backgroundColor: c.warning },
 
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingLeft: spacing.xs },
   avatarWrap: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    backgroundColor: c.primaryFaded, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  avatarText: { fontSize: fontSize.base, fontWeight: '800', color: colors.primary },
+  avatarText: { fontSize: fontSize.base, fontWeight: '800', color: c.primary },
   cardMeta: { flex: 1, gap: 2 },
-  beneName: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
+  beneName: { fontSize: fontSize.sm, fontWeight: '700', color: c.textPrimary },
   cardSubRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  cardRoute: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '500' },
-  cardDot: { fontSize: fontSize.xs, color: colors.textDisabled },
-  cardTime: { fontSize: fontSize.xs, color: colors.textMuted },
+  cardRoute: { fontSize: fontSize.xs, color: c.textSecondary, fontWeight: '500' },
+  cardDot: { fontSize: fontSize.xs, color: c.textDisabled },
+  cardTime: { fontSize: fontSize.xs, color: c.textMuted },
   amountCol: { alignItems: 'flex-end', flexShrink: 0 },
-  amount: { fontSize: fontSize.sm, fontWeight: '800', color: colors.textPrimary },
-  destAmount: { fontSize: fontSize.xs, color: colors.textMuted },
+  amount: { fontSize: fontSize.sm, fontWeight: '800', color: c.textPrimary },
+  destAmount: { fontSize: fontSize.xs, color: c.textMuted },
 
   chips: { flexDirection: 'row', gap: spacing.sm, paddingLeft: spacing.xs },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: colors.surface, borderRadius: radius.full,
+    backgroundColor: c.surface, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 3,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: c.border,
   },
-  chipText: { fontSize: 10, color: colors.textMuted, fontWeight: '500' },
+  chipText: { fontSize: 10, color: c.textMuted, fontWeight: '500' },
 
   actions: { flexDirection: 'row', gap: spacing.sm, paddingLeft: spacing.xs },
   actionBtn: {
@@ -266,26 +267,26 @@ const styles = StyleSheet.create({
     gap: spacing.xs, paddingVertical: spacing.sm,
     borderRadius: radius.md, borderWidth: 1.5,
   },
-  rejectBtn:  { borderColor: colors.danger + '50',  backgroundColor: colors.dangerFaded  },
-  approveBtn: { borderColor: colors.success + '50', backgroundColor: colors.successFaded },
+  rejectBtn:  { borderColor: c.danger + '50',  backgroundColor: c.dangerFaded  },
+  approveBtn: { borderColor: c.success + '50', backgroundColor: c.successFaded },
   actionText: { fontSize: fontSize.sm, fontWeight: '700' },
 })
 
-const sheet = StyleSheet.create({
+const createSheetStyles = (c: Colors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
   container: {
-    backgroundColor: colors.card,
+    backgroundColor: c.card,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: spacing.xl, gap: spacing.base, paddingBottom: spacing['3xl'],
   },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.sm },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.border, alignSelf: 'center', marginBottom: spacing.sm },
   iconWrap: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
-  heading: { fontSize: fontSize.lg, fontWeight: '700', color: colors.textPrimary, textAlign: 'center' },
-  sub: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  heading: { fontSize: fontSize.lg, fontWeight: '700', color: c.textPrimary, textAlign: 'center' },
+  sub: { fontSize: fontSize.sm, color: c.textMuted, textAlign: 'center', lineHeight: 20 },
   input: {
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.md, color: colors.textPrimary, fontSize: fontSize.sm,
+    backgroundColor: c.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: c.border,
+    padding: spacing.md, color: c.textPrimary, fontSize: fontSize.sm,
     minHeight: 80, textAlignVertical: 'top',
   },
   btnRow: { flexDirection: 'row', gap: spacing.sm },

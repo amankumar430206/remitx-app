@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   TouchableOpacity, View,
   Text, ActivityIndicator, StyleSheet,
   type TouchableOpacityProps, type ViewStyle,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { radius, spacing, fontSize } from '@/theme/spacing'
 
 interface ButtonProps extends TouchableOpacityProps {
@@ -25,6 +25,8 @@ export function Button({
   style,
   ...rest
 }: ButtonProps) {
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
   const isDisabled = disabled || loading
   const sizeStyle = sizeStyles[size]
 
@@ -38,13 +40,13 @@ export function Button({
       >
         <LinearGradient
           colors={['#6366F1', '#4F46E5']}
-          style={[styles.inner, sizeStyle]}
+          style={[s.inner, sizeStyle]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
         >
           {loading
             ? <ActivityIndicator color={colors.white} size="small" />
-            : <Text style={[styles.label, styles.labelPrimary, labelSizes[size]]}>{label}</Text>
+            : <Text style={[s.label, s.labelPrimary, labelSizes[size]]}>{label}</Text>
           }
         </LinearGradient>
       </TouchableOpacity>
@@ -61,13 +63,13 @@ export function Button({
       >
         <LinearGradient
           colors={['#EF4444', '#DC2626']}
-          style={[styles.inner, sizeStyle]}
+          style={[s.inner, sizeStyle]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
         >
           {loading
             ? <ActivityIndicator color={colors.white} size="small" />
-            : <Text style={[styles.label, styles.labelPrimary, labelSizes[size]]}>{label}</Text>
+            : <Text style={[s.label, s.labelPrimary, labelSizes[size]]}>{label}</Text>
           }
         </LinearGradient>
       </TouchableOpacity>
@@ -79,10 +81,10 @@ export function Button({
       activeOpacity={0.8}
       disabled={isDisabled}
       style={[
-        styles.inner,
+        s.inner,
         sizeStyle,
-        variant === 'outline' && styles.outline,
-        isDisabled && styles.disabled,
+        variant === 'outline' && s.outline,
+        isDisabled && s.disabled,
         style,
       ]}
       {...rest}
@@ -90,7 +92,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={colors.primary} size="small" />
       ) : (
-        <Text style={[styles.label, variantTextStyles[variant], labelSizes[size]]}>
+        <Text style={[s.label, variantText(colors)[variant], labelSizes[size]]}>
           {label}
         </Text>
       )}
@@ -110,14 +112,14 @@ const labelSizes = StyleSheet.create({
   lg: { fontSize: fontSize.base },
 })
 
-const variantTextStyles = StyleSheet.create({
-  primary: { color: colors.white },
-  outline: { color: colors.textPrimary },
-  ghost: { color: colors.primary },
-  danger: { color: colors.white },
+const variantText = (c: Colors) => StyleSheet.create({
+  primary: { color: c.white },
+  outline: { color: c.textPrimary },
+  ghost:   { color: c.primary },
+  danger:  { color: c.white },
 })
 
-const styles = StyleSheet.create({
+const createStyles = (c: Colors) => StyleSheet.create({
   inner: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -125,11 +127,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   outline: {
-    backgroundColor: colors.transparent,
+    backgroundColor: c.transparent,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   disabled: { opacity: 0.45 },
   label: { fontWeight: '700', letterSpacing: 0.3 },
-  labelPrimary: { color: colors.white },
+  labelPrimary: { color: c.white },
 })

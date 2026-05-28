@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { colors } from "@/theme/colors";
+import { useColors, type Colors } from "@/hooks/useColors";
 import { spacing, fontSize, radius } from "@/theme/spacing";
 import { useAuthStore } from "@/stores/authStore";
 import authApi from "@/api/auth";
@@ -36,44 +35,19 @@ interface DevUser {
   color: string;
 }
 
+// Semantic colors — theme-independent
 const DEV_USERS: DevUser[] = [
-  {
-    label: "Super Admin",
-    role: "super_admin",
-    email: "admin@remitx.com",
-    password: "Admin@RemitX2024!",
-    tenant: "remitx",
-    color: colors.primary,
-  },
-  {
-    label: "Maker",
-    role: "maker",
-    email: "maker1@remitx.com",
-    password: "Test@1234!",
-    tenant: "remitx",
-    color: colors.success,
-  },
-  {
-    label: "Checker",
-    role: "checker",
-    email: "checker1@remitx.com",
-    password: "Test@1234!",
-    tenant: "remitx",
-    color: colors.warning,
-  },
-  {
-    label: "Client Admin",
-    role: "client_admin",
-    email: "cadmin@remitx.com",
-    password: "Test@1234!",
-    tenant: "remitx",
-    color: colors.info,
-  },
+  { label: "Super Admin", role: "super_admin", email: "admin@remitx.com",   password: "Admin@RemitX2024!", tenant: "remitx", color: "#6366F1" },
+  { label: "Maker",       role: "maker",       email: "maker1@remitx.com",  password: "Test@1234!",        tenant: "remitx", color: "#10B981" },
+  { label: "Checker",     role: "checker",     email: "checker1@remitx.com",password: "Test@1234!",        tenant: "remitx", color: "#F59E0B" },
+  { label: "Client Admin",role: "client_admin",email: "cadmin@remitx.com",  password: "Test@1234!",        tenant: "remitx", color: "#3B82F6" },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Login({ navigation }: Props) {
   const { showAlert } = useAlert()
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tenantSlug, setTenantSlug] = useState(DEFAULT_TENANT);
@@ -81,7 +55,7 @@ export function Login({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [activeDevUser, setActiveDevUser] = useState<string | null>(null);
 
-  const setAuth = useAuthStore((s) => s.setAuth);
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const applyDevUser = (u: DevUser) => {
     setEmail(u.email);
@@ -117,29 +91,26 @@ export function Login({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flex}>
+    <SafeAreaView style={s.safe}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={s.flex}>
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={s.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo / Brand */}
-          <View style={styles.brandRow}>
-            <View style={styles.logoBox}>
+          <View style={s.brandRow}>
+            <View style={s.logoBox}>
               <Ionicons name="swap-horizontal" size={28} color={colors.primary} />
             </View>
-            <Text style={styles.brand}>RemitX</Text>
+            <Text style={s.brand}>RemitX</Text>
           </View>
 
-          {/* Heading */}
-          <View style={styles.headingBlock}>
-            <Text style={styles.heading}>Welcome back</Text>
-            <Text style={styles.subheading}>Sign in to your account</Text>
+          <View style={s.headingBlock}>
+            <Text style={s.heading}>Welcome back</Text>
+            <Text style={s.subheading}>Sign in to your account</Text>
           </View>
 
-          {/* Card */}
-          <View style={styles.card}>
+          <View style={s.card}>
             <Input
               label="Email address"
               value={email}
@@ -150,7 +121,6 @@ export function Login({ navigation }: Props) {
               autoComplete="email"
               textContentType="emailAddress"
             />
-
             <Input
               label="Password"
               value={password}
@@ -161,10 +131,9 @@ export function Login({ navigation }: Props) {
               textContentType="password"
             />
 
-            {/* Tenant slug toggle */}
-            <TouchableOpacity style={styles.tenantToggle} onPress={() => setShowTenant((v) => !v)}>
+            <TouchableOpacity style={s.tenantToggle} onPress={() => setShowTenant((v) => !v)}>
               <Ionicons name={showTenant ? "chevron-up" : "chevron-down"} size={14} color={colors.textMuted} />
-              <Text style={styles.tenantToggleLabel}>{showTenant ? "Hide" : "Show"} workspace</Text>
+              <Text style={s.tenantToggleLabel}>{showTenant ? "Hide" : "Show"} workspace</Text>
             </TouchableOpacity>
 
             {showTenant && (
@@ -178,37 +147,35 @@ export function Login({ navigation }: Props) {
               />
             )}
 
-            <Button label="Sign in" onPress={handleLogin} loading={loading} style={styles.loginBtn} />
+            <Button label="Sign in" onPress={handleLogin} loading={loading} style={s.loginBtn} />
           </View>
 
-          {/* Footer */}
-          <Text style={styles.footer}>Secured with end-to-end encryption</Text>
-          <View style={styles.footerBadge}>
+          <Text style={s.footer}>Secured with end-to-end encryption</Text>
+          <View style={s.footerBadge}>
             <Ionicons name="shield-checkmark" size={13} color={colors.success} />
-            <Text style={styles.footerBadgeText}>PCI-DSS compliant</Text>
+            <Text style={s.footerBadgeText}>PCI-DSS compliant</Text>
           </View>
 
-          {/* ── Dev quick-login — only in __DEV__ builds ── */}
           {__DEV__ && (
-            <View style={styles.devPanel}>
-              <View style={styles.devHeader}>
-                <View style={styles.devBadge}>
-                  <Text style={styles.devBadgeText}>DEV</Text>
+            <View style={s.devPanel}>
+              <View style={s.devHeader}>
+                <View style={s.devBadge}>
+                  <Text style={s.devBadgeText}>DEV</Text>
                 </View>
-                <Text style={styles.devTitle}>Quick login</Text>
+                <Text style={s.devTitle}>Quick login</Text>
               </View>
-              <View style={styles.devGrid}>
+              <View style={s.devGrid}>
                 {DEV_USERS.map((u) => {
                   const active = activeDevUser === u.role;
                   return (
                     <TouchableOpacity
                       key={u.role}
-                      style={[styles.devChip, { borderColor: u.color }, active && { backgroundColor: u.color }]}
+                      style={[s.devChip, { borderColor: u.color }, active && { backgroundColor: u.color }]}
                       onPress={() => applyDevUser(u)}
                       activeOpacity={0.75}
                     >
-                      <Text style={[styles.devChipText, active && styles.devChipTextActive]}>{u.label}</Text>
-                      <Text style={[styles.devChipEmail, active && styles.devChipEmailActive]}>{u.email}</Text>
+                      <Text style={[s.devChipText, active && s.devChipTextActive]}>{u.label}</Text>
+                      <Text style={[s.devChipEmail, active && s.devChipEmailActive]}>{u.email}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -221,135 +188,38 @@ export function Login({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   flex: { flex: 1 },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing["2xl"],
-    paddingBottom: spacing["3xl"],
-  },
+  scroll: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing["2xl"], paddingBottom: spacing["3xl"] },
 
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing["2xl"],
-  },
-  logoBox: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryFaded,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brand: {
-    fontSize: fontSize["2xl"],
-    fontWeight: "800",
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-  },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing["2xl"] },
+  logoBox: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: c.primaryFaded, alignItems: "center", justifyContent: "center" },
+  brand: { fontSize: fontSize["2xl"], fontWeight: "800", color: c.textPrimary, letterSpacing: -0.5 },
 
   headingBlock: { marginBottom: spacing["2xl"], gap: spacing.xs },
-  heading: {
-    fontSize: fontSize["3xl"],
-    fontWeight: "700",
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  subheading: { fontSize: fontSize.md, color: colors.textMuted },
+  heading: { fontSize: fontSize["3xl"], fontWeight: "700", color: c.textPrimary, letterSpacing: -0.5 },
+  subheading: { fontSize: fontSize.md, color: c.textMuted },
 
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
-    gap: spacing.base,
-    marginBottom: spacing.xl,
-  },
+  card: { backgroundColor: c.card, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, padding: spacing.xl, gap: spacing.base, marginBottom: spacing.xl },
 
-  tenantToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    alignSelf: "flex-start",
-    paddingVertical: spacing.xs,
-  },
-  tenantToggleLabel: { fontSize: fontSize.sm, color: colors.textMuted },
+  tenantToggle: { flexDirection: "row", alignItems: "center", gap: spacing.xs, alignSelf: "flex-start", paddingVertical: spacing.xs },
+  tenantToggleLabel: { fontSize: fontSize.sm, color: c.textMuted },
   loginBtn: { marginTop: spacing.xs },
 
-  footer: {
-    textAlign: "center",
-    fontSize: fontSize.xs,
-    color: colors.textDisabled,
-    marginBottom: spacing.xs,
-  },
-  footerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-  },
-  footerBadgeText: { fontSize: fontSize.xs, color: colors.success },
+  footer: { textAlign: "center", fontSize: fontSize.xs, color: c.textDisabled, marginBottom: spacing.xs },
+  footerBadge: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs },
+  footerBadgeText: { fontSize: fontSize.xs, color: c.success },
 
-  // ── Dev panel ──
-  devPanel: {
-    marginTop: spacing.xl,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.warning,
-    borderStyle: "dashed",
-    padding: spacing.base,
-    gap: spacing.md,
-  },
-  devHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  devBadge: {
-    backgroundColor: colors.warning,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  devBadgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: "700",
-    color: colors.black,
-    letterSpacing: 1,
-  },
-  devTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: "600",
-    color: colors.warning,
-  },
-  devGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  devChip: {
-    flex: 1,
-    minWidth: "45%",
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    gap: 2,
-  },
-  devChipText: {
-    fontSize: fontSize.sm,
-    fontWeight: "700",
-    color: colors.textPrimary,
-  },
-  devChipTextActive: { color: colors.white },
-  devChipEmail: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-  },
+  devPanel: { marginTop: spacing.xl, borderRadius: radius.lg, borderWidth: 1, borderColor: c.warning, borderStyle: "dashed", padding: spacing.base, gap: spacing.md },
+  devHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  devBadge: { backgroundColor: c.warning, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  devBadgeText: { fontSize: fontSize.xs, fontWeight: "700", color: c.black, letterSpacing: 1 },
+  devTitle: { fontSize: fontSize.sm, fontWeight: "600", color: c.warning },
+  devGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  devChip: { flex: 1, minWidth: "45%", borderRadius: radius.md, borderWidth: 1.5, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, gap: 2 },
+  devChipText: { fontSize: fontSize.sm, fontWeight: "700", color: c.textPrimary },
+  devChipTextActive: { color: c.white },
+  devChipEmail: { fontSize: fontSize.xs, color: c.textMuted },
   devChipEmailActive: { color: "rgba(255,255,255,0.75)" },
 });

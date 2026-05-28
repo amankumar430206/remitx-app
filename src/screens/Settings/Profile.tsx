@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Switch,
@@ -9,7 +9,8 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useNavigation } from '@react-navigation/native'
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useAuthStore } from '@/stores/authStore'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
+import { useThemeStore, type ThemeMode } from '@/stores/themeStore'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { type SettingsStackParamList } from '@/navigation/SettingsStack'
 import Constants from 'expo-constants'
@@ -17,12 +18,19 @@ import { useAlert } from '@/hooks/useAlert'
 
 type Nav = NativeStackNavigationProp<SettingsStackParamList>
 
+// Semantic colors — theme-independent hex values
 const KYC_STATUS_CONFIG: Record<string, { label: string; color: string; icon: keyof typeof import('@expo/vector-icons').Ionicons.glyphMap }> = {
-  approved: { label: 'Verified', color: colors.success, icon: 'checkmark-circle' },
-  submitted: { label: 'Under Review', color: colors.warning, icon: 'time' },
-  rejected:  { label: 'Rejected', color: colors.danger, icon: 'close-circle' },
-  pending:   { label: 'Not Started', color: colors.textMuted, icon: 'ellipse-outline' },
+  approved: { label: 'Verified',      color: '#10B981', icon: 'checkmark-circle' },
+  submitted: { label: 'Under Review', color: '#F59E0B', icon: 'time' },
+  rejected:  { label: 'Rejected',     color: '#EF4444', icon: 'close-circle' },
+  pending:   { label: 'Not Started',  color: '#9CA3AF', icon: 'ellipse-outline' },
 }
+
+const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { mode: 'light',  label: 'Light',  icon: 'sunny-outline' },
+  { mode: 'dark',   label: 'Dark',   icon: 'moon-outline' },
+  { mode: 'system', label: 'System', icon: 'phone-portrait-outline' },
+]
 
 function SettingsRow({
   icon, iconBg, label, subtitle, onPress, right, isLast = false,
@@ -36,6 +44,9 @@ function SettingsRow({
   right?: React.ReactNode
   isLast?: boolean
 }) {
+  const colors = useColors()
+  const rows = useMemo(() => createRowStyles(colors), [colors])
+
   const content = (
     <View style={[rows.row, isLast && rows.rowLast]}>
       <View style={[rows.iconWrap, { backgroundColor: iconBg }]}>
@@ -59,6 +70,10 @@ export function Profile() {
   const { showAlert } = useAlert()
   const nav = useNavigation<Nav>()
   const { user, clearAuth } = useAuthStore()
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
+  const themeMode = useThemeStore((st) => st.mode)
+  const setThemeMode = useThemeStore((st) => st.setMode)
   const [notifEnabled, setNotifEnabled] = useState(true)
 
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'User'
@@ -76,53 +91,54 @@ export function Profile() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.header}>
+        <Text style={s.title}>Settings</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
         {/* Identity hero */}
-        <LinearGradient colors={['#1a1040', '#0f1a3a']} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <View style={styles.heroCircle} />
-          <View style={styles.heroRow}>
-            <LinearGradient colors={['#6366F1', '#818CF8']} style={styles.avatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Text style={styles.avatarText}>{initials}</Text>
+        <LinearGradient colors={['#1a1040', '#0f1a3a']} style={s.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <View style={s.heroCircle} />
+          <View style={s.heroRow}>
+            <LinearGradient colors={['#6366F1', '#818CF8']} style={s.avatar} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Text style={s.avatarText}>{initials}</Text>
             </LinearGradient>
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroName} numberOfLines={1}>{fullName}</Text>
-              <Text style={styles.heroEmail} numberOfLines={1}>{user?.email}</Text>
+            <View style={s.heroInfo}>
+              <Text style={s.heroName} numberOfLines={1}>{fullName}</Text>
+              <Text style={s.heroEmail} numberOfLines={1}>{user?.email}</Text>
               {!!roleLabel && (
-                <View style={styles.rolePill}>
-                  <Text style={styles.roleText}>{roleLabel}</Text>
+                <View style={s.rolePill}>
+                  <Text style={s.roleText}>{roleLabel}</Text>
                 </View>
               )}
             </View>
           </View>
 
-          <View style={styles.kycBanner}>
-            <View style={[styles.kycDot, { backgroundColor: kyc.color }]} />
-            <Text style={styles.kycLabel}>KYC Status:</Text>
-            <Text style={[styles.kycValue, { color: kyc.color }]}>{kyc.label}</Text>
+          <View style={s.kycBanner}>
+            <View style={[s.kycDot, { backgroundColor: kyc.color }]} />
+            <Text style={s.kycLabel}>KYC Status:</Text>
+            <Text style={[s.kycValue, { color: kyc.color }]}>{kyc.label}</Text>
           </View>
         </LinearGradient>
 
         {/* Compliance */}
-        <Text style={styles.sectionLabel}>Compliance</Text>
-        <View style={styles.group}>
+        <Text style={s.sectionLabel}>Compliance</Text>
+        <View style={s.group}>
           <SettingsRow
             icon="shield-checkmark-outline"
             iconBg={kyc.color + '30'}
             label="KYC Verification"
             subtitle={kyc.label}
             onPress={() => nav.navigate('KycStatus')}
+            isLast
           />
         </View>
 
         {/* Payments */}
-        <Text style={styles.sectionLabel}>Payments</Text>
-        <View style={styles.group}>
+        <Text style={s.sectionLabel}>Payments</Text>
+        <View style={s.group}>
           <SettingsRow
             icon="people-outline"
             iconBg={colors.primary + '30'}
@@ -134,8 +150,8 @@ export function Profile() {
         </View>
 
         {/* Tools */}
-        <Text style={styles.sectionLabel}>Tools</Text>
-        <View style={styles.group}>
+        <Text style={s.sectionLabel}>Tools</Text>
+        <View style={s.group}>
           <SettingsRow
             icon="sparkles-outline"
             iconBg="#8B5CF630"
@@ -147,8 +163,40 @@ export function Profile() {
         </View>
 
         {/* Preferences */}
-        <Text style={styles.sectionLabel}>Preferences</Text>
-        <View style={styles.group}>
+        <Text style={s.sectionLabel}>Preferences</Text>
+        <View style={s.group}>
+          {/* Appearance / theme toggle */}
+          <View style={s.themeRow}>
+            <View style={[s.themeIconWrap, { backgroundColor: '#6366F130' }]}>
+              <Ionicons name="contrast-outline" size={19} color={colors.white + 'cc'} />
+            </View>
+            <View style={s.themeBody}>
+              <Text style={s.themeLabel}>Appearance</Text>
+              <View style={s.themeSegment}>
+                {THEME_OPTIONS.map(({ mode, label, icon }) => {
+                  const isActive = themeMode === mode
+                  return (
+                    <TouchableOpacity
+                      key={mode}
+                      style={[s.themeSeg, isActive && s.themeSegActive]}
+                      onPress={() => setThemeMode(mode)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={icon}
+                        size={13}
+                        color={isActive ? colors.white : colors.textMuted}
+                      />
+                      <Text style={[s.themeSegText, isActive && s.themeSegTextActive]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+          </View>
+
           <SettingsRow
             icon="notifications-outline"
             iconBg={colors.info + '30'}
@@ -168,28 +216,28 @@ export function Profile() {
         </View>
 
         {/* Security */}
-        <Text style={styles.sectionLabel}>Security</Text>
-        <View style={styles.group}>
+        <Text style={s.sectionLabel}>Security</Text>
+        <View style={s.group}>
           <SettingsRow icon="finger-print-outline" iconBg={colors.success + '25'} label="Biometric lock" subtitle="Enabled on resume" isLast />
         </View>
 
         {/* About */}
-        <Text style={styles.sectionLabel}>About</Text>
-        <View style={styles.group}>
+        <Text style={s.sectionLabel}>About</Text>
+        <View style={s.group}>
           <SettingsRow
             icon="information-circle-outline"
             iconBg={colors.surface}
             label="App version"
             isLast
-            right={<Text style={styles.version}>v{appVersion}</Text>}
+            right={<Text style={s.version}>v{appVersion}</Text>}
           />
         </View>
 
         {/* Dev tools */}
         {__DEV__ && (
           <>
-            <Text style={styles.sectionLabel}>Developer</Text>
-            <View style={styles.group}>
+            <Text style={s.sectionLabel}>Developer</Text>
+            <View style={s.group}>
               <SettingsRow
                 icon="radio-outline"
                 iconBg="#7C3AED30"
@@ -203,10 +251,10 @@ export function Profile() {
         )}
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
-          <LinearGradient colors={['#EF444420', '#EF444408']} style={styles.logoutGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+        <TouchableOpacity style={s.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
+          <LinearGradient colors={['#EF444420', '#EF444408']} style={s.logoutGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
             <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-            <Text style={styles.logoutText}>Sign out</Text>
+            <Text style={s.logoutText}>Sign out</Text>
           </LinearGradient>
         </TouchableOpacity>
 
@@ -215,22 +263,22 @@ export function Profile() {
   )
 }
 
-const rows = StyleSheet.create({
+const createRowStyles = (c: Colors) => StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    padding: spacing.base, borderBottomWidth: 1, borderBottomColor: colors.border,
+    padding: spacing.base, borderBottomWidth: 1, borderBottomColor: c.border,
   },
   rowLast: { borderBottomWidth: 0 },
   iconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, gap: 2 },
-  label: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
-  sub: { fontSize: fontSize.xs, color: colors.textMuted },
+  label: { fontSize: fontSize.sm, fontWeight: '600', color: c.textPrimary },
+  sub: { fontSize: fontSize.xs, color: c.textMuted },
 })
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   header: { paddingHorizontal: screenPadding, paddingTop: spacing.base, paddingBottom: spacing.sm },
-  title: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary },
+  title: { fontSize: fontSize.xl, fontWeight: '800', color: c.textPrimary },
   scroll: { paddingBottom: spacing['3xl'] },
 
   // Hero
@@ -246,16 +294,16 @@ const styles = StyleSheet.create({
   },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.base },
   avatar: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  avatarText: { fontSize: fontSize.xl, fontWeight: '800', color: colors.white },
+  avatarText: { fontSize: fontSize.xl, fontWeight: '800', color: c.white },
   heroInfo: { flex: 1, gap: 3 },
-  heroName: { fontSize: fontSize.base, fontWeight: '800', color: colors.textPrimary },
-  heroEmail: { fontSize: fontSize.xs, color: colors.textMuted },
+  heroName: { fontSize: fontSize.base, fontWeight: '800', color: c.textPrimary },
+  heroEmail: { fontSize: fontSize.xs, color: c.textMuted },
   rolePill: {
-    alignSelf: 'flex-start', backgroundColor: colors.primaryFaded,
+    alignSelf: 'flex-start', backgroundColor: c.primaryFaded,
     borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2,
-    borderWidth: 1, borderColor: colors.primary + '30',
+    borderWidth: 1, borderColor: c.primary + '30',
   },
-  roleText: { fontSize: 9, fontWeight: '800', color: colors.primaryLight, letterSpacing: 0.8, textTransform: 'uppercase' },
+  roleText: { fontSize: 9, fontWeight: '800', color: c.primaryLight, letterSpacing: 0.8, textTransform: 'uppercase' },
 
   kycBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -263,30 +311,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   kycDot: { width: 6, height: 6, borderRadius: 3 },
-  kycLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '500' },
+  kycLabel: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '500' },
   kycValue: { fontSize: fontSize.xs, fontWeight: '700' },
 
   // Section
   sectionLabel: {
-    fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted,
+    fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
     textTransform: 'uppercase', letterSpacing: 0.8,
     paddingHorizontal: screenPadding, marginBottom: spacing.xs, marginTop: spacing.lg,
   },
   group: {
-    marginHorizontal: screenPadding, backgroundColor: colors.card,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    marginHorizontal: screenPadding, backgroundColor: c.card,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, overflow: 'hidden',
   },
 
-  version: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: '500' },
+  // Theme toggle row
+  themeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    padding: spacing.base, borderBottomWidth: 1, borderBottomColor: c.border,
+  },
+  themeIconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  themeBody: { flex: 1, gap: spacing.sm },
+  themeLabel: { fontSize: fontSize.sm, fontWeight: '600', color: c.textPrimary },
+  themeSegment: {
+    flexDirection: 'row',
+    backgroundColor: c.surface,
+    borderRadius: radius.md,
+    borderWidth: 1, borderColor: c.border,
+    overflow: 'hidden',
+  },
+  themeSeg: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 4, paddingVertical: spacing.sm,
+  },
+  themeSegActive: { backgroundColor: c.primary },
+  themeSegText: { fontSize: fontSize.xs, fontWeight: '600', color: c.textMuted },
+  themeSegTextActive: { color: c.white },
+
+  version: { fontSize: fontSize.sm, color: c.textMuted, fontWeight: '500' },
 
   logoutBtn: {
     marginHorizontal: screenPadding, marginTop: spacing.xl,
     borderRadius: radius.lg, overflow: 'hidden',
-    borderWidth: 1, borderColor: colors.danger + '30',
+    borderWidth: 1, borderColor: c.danger + '30',
   },
   logoutGrad: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, paddingVertical: spacing.base,
   },
-  logoutText: { fontSize: fontSize.base, fontWeight: '700', color: colors.danger },
+  logoutText: { fontSize: fontSize.base, fontWeight: '700', color: c.danger },
 })

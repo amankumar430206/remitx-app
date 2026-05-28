@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, FlatList, Modal, ScrollView, KeyboardAvoidingView, Platform,
   TouchableOpacity, RefreshControl, ActivityIndicator, Pressable,
@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useAlert } from '@/hooks/useAlert'
 import { getApiError } from '@/utils/apiError'
 import { Input } from '@/components/ui/Input'
-import { colors } from '@/theme/colors'
+import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatDateTime } from '@/utils/format'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -21,7 +21,9 @@ const ADMIN_ROLES = new Set(['super_admin', 'client_admin'])
 interface Props { account: Account; onClose: () => void }
 
 export function AccountDetail({ account, onClose }: Props) {
-  const user = useAuthStore(s => s.user)
+  const colors = useColors()
+  const s = useMemo(() => createStyles(colors), [colors])
+  const user = useAuthStore(st => st.user)
   const isAdmin = ADMIN_ROLES.has(user?.role ?? '')
   const { showAlert } = useAlert()
   const qc = useQueryClient()
@@ -84,42 +86,42 @@ export function AccountDetail({ account, onClose }: Props) {
   const renderEntry = ({ item }: { item: LedgerEntry }) => {
     const isCredit = item.entry_type === 'credit'
     return (
-      <View style={styles.entry}>
-        <View style={[styles.entryIcon, isCredit ? styles.creditIcon : styles.debitIcon]}>
+      <View style={s.entry}>
+        <View style={[s.entryIcon, isCredit ? s.creditIcon : s.debitIcon]}>
           <Ionicons
             name={isCredit ? 'arrow-down' : 'arrow-up'}
             size={16}
             color={isCredit ? colors.success : colors.danger}
           />
         </View>
-        <View style={styles.entryMeta}>
-          <Text style={styles.entryDesc} numberOfLines={1}>{item.description}</Text>
-          <Text style={styles.entryDate}>{formatDateTime(item.created_at)}</Text>
+        <View style={s.entryMeta}>
+          <Text style={s.entryDesc} numberOfLines={1}>{item.description}</Text>
+          <Text style={s.entryDate}>{formatDateTime(item.created_at)}</Text>
         </View>
-        <View style={styles.entryRight}>
-          <Text style={[styles.entryAmount, isCredit ? styles.credit : styles.debit]}>
+        <View style={s.entryRight}>
+          <Text style={[s.entryAmount, isCredit ? s.credit : s.debit]}>
             {isCredit ? '+' : '-'}{formatMoney(item.amount, item.currency)}
           </Text>
-          <Text style={styles.entryBalance}>{formatMoney(item.balance_after, item.currency)}</Text>
+          <Text style={s.entryBalance}>{formatMoney(item.balance_after, item.currency)}</Text>
         </View>
       </View>
     )
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.handleWrap}><View style={styles.handle} /></View>
+    <SafeAreaView style={s.safe}>
+      <View style={s.handleWrap}><View style={s.handle} /></View>
 
-      <View style={styles.header}>
-        <Text style={styles.title}>{account.currency} Account</Text>
-        <View style={styles.headerActions}>
+      <View style={s.header}>
+        <Text style={s.title}>{account.currency} Account</Text>
+        <View style={s.headerActions}>
           {isAdmin && (
-            <TouchableOpacity onPress={() => setAdjustOpen(true)} style={styles.adjustBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => setAdjustOpen(true)} style={s.adjustBtn} activeOpacity={0.7}>
               <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-              <Text style={styles.adjustBtnText}>Adjust</Text>
+              <Text style={s.adjustBtnText}>Adjust</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={refetch} disabled={isRefetching} style={styles.refreshBtn} activeOpacity={0.7}>
+          <TouchableOpacity onPress={refetch} disabled={isRefetching} style={s.refreshBtn} activeOpacity={0.7}>
             {isRefetching
               ? <ActivityIndicator size="small" color={colors.primary} />
               : <Ionicons name="sync-outline" size={20} color={colors.textMuted} />
@@ -132,26 +134,26 @@ export function AccountDetail({ account, onClose }: Props) {
       </View>
 
       {/* Balance hero */}
-      <View style={styles.hero}>
-        <Text style={styles.heroLabel}>Available balance</Text>
-        <Text style={styles.heroBalance}>{formatMoney(displayBalance, account.currency)}</Text>
+      <View style={s.hero}>
+        <Text style={s.heroLabel}>Available balance</Text>
+        <Text style={s.heroBalance}>{formatMoney(displayBalance, account.currency)}</Text>
         {account.account_number && (
-          <View style={styles.acctNumRow}>
+          <View style={s.acctNumRow}>
             <Ionicons name="card-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.acctNum}>···· {account.account_number.slice(-4)}</Text>
+            <Text style={s.acctNum}>···· {account.account_number.slice(-4)}</Text>
           </View>
         )}
       </View>
 
-      <Text style={styles.sectionLabel}>Transaction history</Text>
+      <Text style={s.sectionLabel}>Transaction history</Text>
 
       <FlatList
         data={data ?? []}
         keyExtractor={(i) => i.id}
         renderItem={renderEntry}
         refreshControl={<RefreshControl refreshing={isLoading || isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
-        contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        contentContainerStyle={s.list}
+        ItemSeparatorComponent={() => <View style={s.sep} />}
         ListEmptyComponent={
           !isLoading ? <EmptyState icon="receipt-outline" title="No transactions" subtitle="No ledger entries for this account" /> : null
         }
@@ -160,32 +162,32 @@ export function AccountDetail({ account, onClose }: Props) {
       {/* Adjust balance modal — admin only */}
       <Modal visible={adjustOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeAdjust}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <SafeAreaView style={styles.modalSafe}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Adjust balance</Text>
+          <SafeAreaView style={s.modalSafe}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Adjust balance</Text>
               <TouchableOpacity onPress={closeAdjust}>
                 <Ionicons name="close" size={24} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSub}>
+            <Text style={s.modalSub}>
               Manually credit or debit the {account.currency} account. A ledger entry will be created with the reason you provide.
             </Text>
 
-            <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
+            <ScrollView style={s.modalBody} keyboardShouldPersistTaps="handled">
               {/* Credit / Debit toggle */}
-              <View style={styles.typeToggle}>
+              <View style={s.typeToggle}>
                 {(['credit', 'debit'] as const).map(t => (
                   <Pressable
                     key={t}
                     onPress={() => setAdjustType(t)}
                     style={[
-                      styles.typeBtn,
-                      adjustType === t && (t === 'credit' ? styles.typeBtnCredit : styles.typeBtnDebit),
+                      s.typeBtn,
+                      adjustType === t && (t === 'credit' ? s.typeBtnCredit : s.typeBtnDebit),
                     ]}
                   >
                     <Text style={[
-                      styles.typeBtnText,
-                      adjustType === t && (t === 'credit' ? styles.typeBtnTextCredit : styles.typeBtnTextDebit),
+                      s.typeBtnText,
+                      adjustType === t && (t === 'credit' ? s.typeBtnTextCredit : s.typeBtnTextDebit),
                     ]}>
                       {t === 'credit' ? '+ Credit' : '− Debit'}
                     </Text>
@@ -211,23 +213,23 @@ export function AccountDetail({ account, onClose }: Props) {
               </View>
 
               {adjustError ? (
-                <Text style={styles.formError}>{adjustError}</Text>
+                <Text style={s.formError}>{adjustError}</Text>
               ) : null}
             </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={closeAdjust} activeOpacity={0.7}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+            <View style={s.modalFooter}>
+              <TouchableOpacity style={s.cancelBtn} onPress={closeAdjust} activeOpacity={0.7}>
+                <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.confirmBtn, adjustType === 'debit' && styles.confirmBtnDebit]}
+                style={[s.confirmBtn, adjustType === 'debit' && s.confirmBtnDebit]}
                 onPress={handleAdjust}
                 disabled={adjustMutation.isPending}
                 activeOpacity={0.8}
               >
                 {adjustMutation.isPending
                   ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={styles.confirmBtnText}>{adjustType === 'credit' ? 'Credit account' : 'Debit account'}</Text>
+                  : <Text style={s.confirmBtnText}>{adjustType === 'credit' ? 'Credit account' : 'Debit account'}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -238,73 +240,73 @@ export function AccountDetail({ account, onClose }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const createStyles = (c: Colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
   handleWrap: { alignItems: 'center', paddingTop: spacing.sm },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.border },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: screenPadding, paddingVertical: spacing.base,
   },
-  title: { fontSize: fontSize.lg, fontWeight: '700', color: colors.textPrimary },
+  title: { fontSize: fontSize.lg, fontWeight: '700', color: c.textPrimary },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  refreshBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-  adjustBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary },
-  adjustBtnText: { fontSize: fontSize.sm, fontWeight: '600', color: colors.primary },
+  refreshBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
+  adjustBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.sm, borderWidth: 1, borderColor: c.primary },
+  adjustBtnText: { fontSize: fontSize.sm, fontWeight: '600', color: c.primary },
 
-  modalSafe: { flex: 1, backgroundColor: colors.bg },
+  modalSafe: { flex: 1, backgroundColor: c.bg },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: screenPadding, paddingVertical: spacing.base },
-  modalTitle: { fontSize: fontSize.xl, fontWeight: '700', color: colors.textPrimary },
-  modalSub: { fontSize: fontSize.sm, color: colors.textMuted, paddingHorizontal: screenPadding, marginBottom: spacing.lg, lineHeight: 20 },
+  modalTitle: { fontSize: fontSize.xl, fontWeight: '700', color: c.textPrimary },
+  modalSub: { fontSize: fontSize.sm, color: c.textMuted, paddingHorizontal: screenPadding, marginBottom: spacing.lg, lineHeight: 20 },
   modalBody: { flex: 1, paddingHorizontal: screenPadding },
-  modalFooter: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: screenPadding, paddingVertical: spacing.base, borderTopWidth: 1, borderTopColor: colors.border },
+  modalFooter: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: screenPadding, paddingVertical: spacing.base, borderTopWidth: 1, borderTopColor: c.border },
 
-  typeToggle: { flexDirection: 'row', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden', marginBottom: spacing.lg },
-  typeBtn: { flex: 1, paddingVertical: spacing.sm + 2, alignItems: 'center', backgroundColor: colors.surface },
-  typeBtnCredit: { backgroundColor: colors.success + '22' },
-  typeBtnDebit: { backgroundColor: colors.danger + '22' },
-  typeBtnText: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textMuted },
-  typeBtnTextCredit: { color: colors.success },
-  typeBtnTextDebit: { color: colors.danger },
+  typeToggle: { flexDirection: 'row', borderWidth: 1, borderColor: c.border, borderRadius: radius.md, overflow: 'hidden', marginBottom: spacing.lg },
+  typeBtn: { flex: 1, paddingVertical: spacing.sm + 2, alignItems: 'center', backgroundColor: c.surface },
+  typeBtnCredit: { backgroundColor: c.success + '22' },
+  typeBtnDebit: { backgroundColor: c.danger + '22' },
+  typeBtnText: { fontSize: fontSize.sm, fontWeight: '600', color: c.textMuted },
+  typeBtnTextCredit: { color: c.success },
+  typeBtnTextDebit: { color: c.danger },
 
-  formError: { fontSize: fontSize.sm, color: colors.danger, marginTop: spacing.sm },
+  formError: { fontSize: fontSize.sm, color: c.danger, marginTop: spacing.sm },
 
-  cancelBtn: { flex: 1, paddingVertical: spacing.base, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center' },
-  cancelBtnText: { fontSize: fontSize.md, fontWeight: '600', color: colors.textSecondary },
-  confirmBtn: { flex: 2, paddingVertical: spacing.base, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center' },
-  confirmBtnDebit: { backgroundColor: colors.danger },
+  cancelBtn: { flex: 1, paddingVertical: spacing.base, borderRadius: radius.lg, borderWidth: 1.5, borderColor: c.border, alignItems: 'center' },
+  cancelBtnText: { fontSize: fontSize.md, fontWeight: '600', color: c.textSecondary },
+  confirmBtn: { flex: 2, paddingVertical: spacing.base, borderRadius: radius.lg, backgroundColor: c.primary, alignItems: 'center' },
+  confirmBtnDebit: { backgroundColor: c.danger },
   confirmBtnText: { fontSize: fontSize.md, fontWeight: '700', color: '#fff' },
 
   hero: {
     alignItems: 'center', paddingVertical: spacing.xl,
     marginHorizontal: screenPadding, marginBottom: spacing.sm,
-    backgroundColor: colors.card, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, gap: spacing.xs,
+    backgroundColor: c.card, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: c.border, gap: spacing.xs,
   },
-  heroLabel: { fontSize: fontSize.sm, color: colors.textMuted },
-  heroBalance: { fontSize: fontSize['3xl'], fontWeight: '800', color: colors.textPrimary },
+  heroLabel: { fontSize: fontSize.sm, color: c.textMuted },
+  heroBalance: { fontSize: fontSize['3xl'], fontWeight: '800', color: c.textPrimary },
   acctNumRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  acctNum: { fontSize: fontSize.sm, color: colors.textMuted },
+  acctNum: { fontSize: fontSize.sm, color: c.textMuted },
 
   sectionLabel: {
-    fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted,
+    fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
     textTransform: 'uppercase', letterSpacing: 0.8,
     paddingHorizontal: screenPadding, marginBottom: spacing.sm,
   },
 
   list: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
-  sep: { height: 1, backgroundColor: colors.border, marginLeft: 60 },
+  sep: { height: 1, backgroundColor: c.border, marginLeft: 60 },
 
   entry: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   entryIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  creditIcon: { backgroundColor: colors.successFaded },
-  debitIcon: { backgroundColor: colors.dangerFaded },
+  creditIcon: { backgroundColor: c.successFaded },
+  debitIcon: { backgroundColor: c.dangerFaded },
   entryMeta: { flex: 1 },
-  entryDesc: { fontSize: fontSize.sm, fontWeight: '500', color: colors.textPrimary },
-  entryDate: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  entryDesc: { fontSize: fontSize.sm, fontWeight: '500', color: c.textPrimary },
+  entryDate: { fontSize: fontSize.xs, color: c.textMuted, marginTop: 2 },
   entryRight: { alignItems: 'flex-end', gap: 2 },
   entryAmount: { fontSize: fontSize.sm, fontWeight: '700' },
-  credit: { color: colors.success },
-  debit: { color: colors.danger },
-  entryBalance: { fontSize: fontSize.xs, color: colors.textMuted },
+  credit: { color: c.success },
+  debit: { color: c.danger },
+  entryBalance: { fontSize: fontSize.xs, color: c.textMuted },
 })
