@@ -408,15 +408,16 @@ const createStyles = (c: Colors) => StyleSheet.create({
     position: 'absolute', width: 120, height: 120, borderRadius: 60,
     backgroundColor: '#818CF808', bottom: -30, left: 20,
   },
-  heroLabel: { fontSize: fontSize.xs, color: c.textMuted, letterSpacing: 1, textTransform: 'uppercase', fontWeight: '600', marginBottom: spacing.sm },
+  // Hero text is always white — the gradient background is hardcoded dark and never changes with theme
+  heroLabel: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.50)', letterSpacing: 1, textTransform: 'uppercase', fontWeight: '600', marginBottom: spacing.sm },
   heroBalanceRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.lg },
-  heroCurrency: { fontSize: fontSize['2xl'], fontWeight: '300', color: c.textSecondary, marginTop: 8, marginRight: 2 },
-  heroAmount: { fontSize: 52, fontWeight: '800', color: c.textPrimary, letterSpacing: -2, lineHeight: 58 },
-  heroAmountCents: { fontSize: fontSize.xl, fontWeight: '400', color: c.textMuted, marginTop: 14, marginLeft: 2 },
+  heroCurrency: { fontSize: fontSize['2xl'], fontWeight: '300', color: 'rgba(255,255,255,0.60)', marginTop: 8, marginRight: 2 },
+  heroAmount: { fontSize: 52, fontWeight: '800', color: '#FFFFFF', letterSpacing: -2, lineHeight: 58 },
+  heroAmountCents: { fontSize: fontSize.xl, fontWeight: '400', color: 'rgba(255,255,255,0.55)', marginTop: 14, marginLeft: 2 },
   heroFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   heroStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroDot: { width: 6, height: 6, borderRadius: 3 },
-  heroStatText: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '500' },
+  heroStatText: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.50)', fontWeight: '500' },
 
   // ── Account cards ──
   sectionTitle2: { fontSize: fontSize.sm, fontWeight: '700', color: c.textMuted, letterSpacing: 0.5, textTransform: 'uppercase', paddingHorizontal: screenPadding, marginBottom: spacing.sm },

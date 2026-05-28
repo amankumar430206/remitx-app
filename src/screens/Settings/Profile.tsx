@@ -296,8 +296,9 @@ const createStyles = (c: Colors) => StyleSheet.create({
   avatar: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   avatarText: { fontSize: fontSize.xl, fontWeight: '800', color: c.white },
   heroInfo: { flex: 1, gap: 3 },
-  heroName: { fontSize: fontSize.base, fontWeight: '800', color: c.textPrimary },
-  heroEmail: { fontSize: fontSize.xs, color: c.textMuted },
+  // Hero text is always white — gradient background is hardcoded dark
+  heroName: { fontSize: fontSize.base, fontWeight: '800', color: '#FFFFFF' },
+  heroEmail: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.55)' },
   rolePill: {
     alignSelf: 'flex-start', backgroundColor: c.primaryFaded,
     borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2,
@@ -311,7 +312,7 @@ const createStyles = (c: Colors) => StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   kycDot: { width: 6, height: 6, borderRadius: 3 },
-  kycLabel: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '500' },
+  kycLabel: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.50)', fontWeight: '500' },
   kycValue: { fontSize: fontSize.xs, fontWeight: '700' },
 
   // Section
