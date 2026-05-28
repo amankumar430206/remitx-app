@@ -133,6 +133,19 @@ export function Profile() {
           />
         </View>
 
+        {/* Tools */}
+        <Text style={styles.sectionLabel}>Tools</Text>
+        <View style={styles.group}>
+          <SettingsRow
+            icon="sparkles-outline"
+            iconBg="#8B5CF630"
+            label="AI Assistant"
+            subtitle="Ask questions about payments & FX"
+            onPress={() => nav.navigate('AIAssistant')}
+            isLast
+          />
+        </View>
+
         {/* Preferences */}
         <Text style={styles.sectionLabel}>Preferences</Text>
         <View style={styles.group}>

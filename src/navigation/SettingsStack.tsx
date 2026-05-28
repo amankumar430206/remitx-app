@@ -6,6 +6,8 @@ import { KycStatus } from '@/screens/Kyc/KycStatus'
 import { KycDocumentUpload } from '@/screens/Kyc/KycDocumentUpload'
 import { BeneficiaryList } from '@/screens/Beneficiaries/BeneficiaryList'
 import { BeneficiaryNew } from '@/screens/Beneficiaries/BeneficiaryNew'
+import { BeneficiaryDetail } from '@/screens/Beneficiaries/BeneficiaryDetail'
+import { AIAssistant } from '@/screens/AIAssistant'
 import { NetworkInspector } from '@/screens/Dev/NetworkInspector'
 
 export type SettingsStackParamList = {
@@ -14,6 +16,8 @@ export type SettingsStackParamList = {
   KycDocumentUpload: { docType: string }
   BeneficiaryList: undefined
   BeneficiaryNew: undefined
+  BeneficiaryDetail: { id: string }
+  AIAssistant: undefined
   NetworkInspector: undefined
 }
 
@@ -33,6 +37,8 @@ export function SettingsStack() {
       <Stack.Screen name="KycDocumentUpload" component={KycDocumentUpload} />
       <Stack.Screen name="BeneficiaryList" component={BeneficiaryList} />
       <Stack.Screen name="BeneficiaryNew" component={BeneficiaryNew} />
+      <Stack.Screen name="BeneficiaryDetail" component={BeneficiaryDetail} />
+      <Stack.Screen name="AIAssistant" component={AIAssistant} />
       {__DEV__ && <Stack.Screen name="NetworkInspector" component={NetworkInspector} />}
     </Stack.Navigator>
   )
