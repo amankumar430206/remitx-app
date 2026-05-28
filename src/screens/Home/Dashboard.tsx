@@ -48,6 +48,16 @@ function cardGradient(currency: string): readonly [string, string, string] {
   return CARD_GRADIENTS[currency.toUpperCase()] ?? CARD_GRADIENTS.DEFAULT
 }
 
+const HEADER_ACTIONS: {
+  label: string
+  icon: keyof typeof Ionicons.glyphMap
+  tab: keyof AppTabsParamList
+  variant: 'primary' | 'secondary'
+}[] = [
+  { label: 'Send money',  icon: 'paper-plane',    tab: 'Payments', variant: 'primary'   },
+  { label: 'Approve',     icon: 'checkmark-done', tab: 'Approve',  variant: 'secondary' },
+]
+
 const QUICK_ACTIONS = [
   { icon: 'paper-plane' as const,    label: 'Send',     tab: 'Payments' as const,  colors: ['#6366F1', '#818CF8'] as [string, string] },
   { icon: 'checkmark-circle' as const, label: 'Approve', tab: 'Approve' as const,  colors: ['#10B981', '#34D399'] as [string, string] },
@@ -224,14 +234,20 @@ export function Dashboard() {
 
         {/* ── CTA row ── */}
         <View style={s.ctaRow}>
-          <TouchableOpacity style={s.ctaPrimary} onPress={() => nav.navigate('Payments')} activeOpacity={0.8}>
-            <Ionicons name="paper-plane" size={14} color={colors.white} />
-            <Text style={s.ctaPrimaryText}>Send money</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.ctaSecondary} onPress={() => nav.navigate('Approve')} activeOpacity={0.8}>
-            <Ionicons name="checkmark-done" size={14} color={colors.primary} />
-            <Text style={s.ctaSecondaryText}>Approve</Text>
-          </TouchableOpacity>
+          {HEADER_ACTIONS.map((action) => {
+            const isPrimary = action.variant === 'primary'
+            return (
+              <TouchableOpacity
+                key={action.label}
+                style={isPrimary ? s.ctaPrimary : s.ctaSecondary}
+                onPress={() => nav.navigate(action.tab)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name={action.icon} size={14} color={isPrimary ? colors.white : colors.primary} />
+                <Text style={isPrimary ? s.ctaPrimaryText : s.ctaSecondaryText}>{action.label}</Text>
+              </TouchableOpacity>
+            )
+          })}
         </View>
 
         {/* ── Account cards ── */}
