@@ -1,93 +1,225 @@
 import React from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
+import {
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Clipboard, Alert,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 import { type Payment } from '@/api/payments'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatDateTime, statusColor, statusLabel } from '@/utils/format'
-import { StatusBadge } from '@/components/ui/Badge'
-import { Card } from '@/components/ui/Card'
 
-const STATUS_ORDER = ['pending_approval', 'approved', 'processing', 'completed', 'rejected', 'failed']
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function statusIcon(status: string): keyof typeof Ionicons.glyphMap {
+  switch (status) {
+    case 'completed':        return 'checkmark-circle'
+    case 'approved':         return 'checkmark-circle-outline'
+    case 'processing':       return 'sync-outline'
+    case 'pending_approval': return 'time-outline'
+    case 'rejected':         return 'close-circle'
+    case 'failed':           return 'warning'
+    case 'cancelled':        return 'ban-outline'
+    default:                 return 'ellipse-outline'
+  }
+}
+
+function heroGradient(status: string): [string, string, string] {
+  const c = statusColor(status)
+  return [`${c}22`, `${c}08`, colors.bg]
+}
+
+function copyToClipboard(text: string, label: string) {
+  Clipboard.setString(text)
+  Alert.alert('Copied', `${label} copied to clipboard.`, [{ text: 'OK' }])
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SectionHeader({ icon, title }: { icon: keyof typeof Ionicons.glyphMap; title: string }) {
+  return (
+    <View style={s.sectionHeader}>
+      <View style={s.sectionIconWrap}>
+        <Ionicons name={icon} size={12} color={colors.primary} />
+      </View>
+      <Text style={s.sectionTitle}>{title}</Text>
+    </View>
+  )
+}
+
+function InfoRow({
+  label, value, mono, copyable, last,
+}: {
+  label: string
+  value: string
+  mono?: boolean
+  copyable?: boolean
+  last?: boolean
+}) {
+  return (
+    <View style={[s.infoRow, last && s.infoRowLast]}>
+      <Text style={s.infoLabel}>{label}</Text>
+      <TouchableOpacity
+        style={s.infoValueWrap}
+        onPress={copyable ? () => copyToClipboard(value, label) : undefined}
+        activeOpacity={copyable ? 0.6 : 1}
+      >
+        <Text style={[s.infoValue, mono && s.infoValueMono]} numberOfLines={2}>
+          {value}
+        </Text>
+        {copyable && (
+          <Ionicons name="copy-outline" size={13} color={colors.textDisabled} style={{ marginLeft: 5 }} />
+        )}
+      </TouchableOpacity>
+    </View>
+  )
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 interface Props { payment: Payment; onClose: () => void }
 
 export function PaymentDetail({ payment: p, onClose }: Props) {
   const history = p.status_history ?? []
+  const sc = statusColor(p.status)
+  const totalDebit = parseFloat(p.source_amount) + parseFloat(p.fee_amount)
+  const hasFee = parseFloat(p.fee_amount) > 0
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* Handle bar */}
-      <View style={styles.handleWrap}><View style={styles.handle} /></View>
+    <SafeAreaView style={s.safe}>
+      {/* Drag handle */}
+      <View style={s.handleBar}><View style={s.handle} /></View>
 
-      <View style={styles.header}>
-        <Text style={styles.title}>Payment details</Text>
-        <TouchableOpacity onPress={onClose}>
-          <Ionicons name="close" size={24} color={colors.textMuted} />
+      {/* Header */}
+      <View style={s.header}>
+        <Text style={s.headerTitle}>Payment details</Text>
+        <TouchableOpacity style={s.closeBtn} onPress={onClose} activeOpacity={0.7}>
+          <Ionicons name="close" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Hero amount */}
-        <View style={[styles.hero, { borderTopColor: statusColor(p.status) }]}>
-          <View style={[styles.heroIconWrap, { backgroundColor: statusColor(p.status) + '22' }]}>
-            <Ionicons name="swap-horizontal" size={22} color={statusColor(p.status)} />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={s.scroll}
+      >
+        {/* ── Hero ── */}
+        <LinearGradient
+          colors={heroGradient(p.status)}
+          style={s.hero}
+          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+        >
+          {/* Decorative glow */}
+          <View style={[s.heroGlow, { backgroundColor: sc + '18' }]} />
+
+          {/* Status icon */}
+          <View style={[s.heroStatusIcon, { backgroundColor: sc + '22', borderColor: sc + '44' }]}>
+            <Ionicons name={statusIcon(p.status)} size={26} color={sc} />
           </View>
-          <Text style={styles.heroAmount}>{formatMoney(p.source_amount, p.source_currency)}</Text>
-          <View style={styles.heroRoute}>
-            <Text style={styles.heroRouteCcy}>{p.source_currency}</Text>
-            <Ionicons name="arrow-forward" size={13} color={colors.textMuted} />
-            <Text style={styles.heroRouteCcy}>{p.dest_currency}</Text>
-            <Text style={styles.heroRouteDest}>{formatMoney(p.dest_amount, p.dest_currency)}</Text>
+
+          {/* Big amount */}
+          <Text style={s.heroAmount}>{formatMoney(p.source_amount, p.source_currency)}</Text>
+
+          {/* Status label */}
+          <View style={[s.statusPill, { backgroundColor: sc + '22', borderColor: sc + '44' }]}>
+            <View style={[s.statusDot, { backgroundColor: sc }]} />
+            <Text style={[s.statusText, { color: sc }]}>{statusLabel(p.status)}</Text>
           </View>
-          <StatusBadge status={p.status} />
+
+          {/* Transfer route */}
+          <View style={s.routeRow}>
+            <View style={s.routeBox}>
+              <Text style={s.routeCcy}>{p.source_currency}</Text>
+              <Text style={s.routeAmt}>{formatMoney(p.source_amount, p.source_currency)}</Text>
+            </View>
+            <View style={s.routeArrow}>
+              <Ionicons name="arrow-forward" size={16} color={colors.textDisabled} />
+            </View>
+            <View style={[s.routeBox, s.routeBoxRight]}>
+              <Text style={s.routeCcy}>{p.dest_currency}</Text>
+              <Text style={[s.routeAmt, { color: colors.success }]}>{formatMoney(p.dest_amount, p.dest_currency)}</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* ── Transaction ── */}
+        <SectionHeader icon="swap-horizontal-outline" title="Transaction" />
+        <View style={s.card}>
+          <InfoRow label="Transfer amount" value={formatMoney(p.source_amount, p.source_currency)} />
+          <InfoRow
+            label="Transfer fee"
+            value={hasFee ? formatMoney(p.fee_amount, p.source_currency) : 'Free'}
+          />
+          {hasFee && (
+            <InfoRow label="Total debit" value={formatMoney(String(totalDebit), p.source_currency)} />
+          )}
+          <InfoRow
+            label="Exchange rate"
+            value={`1 ${p.source_currency} = ${parseFloat(p.exchange_rate).toFixed(4)} ${p.dest_currency}`}
+          />
+          <InfoRow label="They receive" value={formatMoney(p.dest_amount, p.dest_currency)} last />
         </View>
 
-        {/* Details */}
-        <Card style={styles.detailsCard}>
-          {[
-            { label: 'Recipient', value: p.beneficiary_name ?? '—' },
-            { label: 'Transfer amount', value: formatMoney(p.source_amount, p.source_currency) },
-            { label: 'Transfer fee', value: formatMoney(p.fee_amount, p.source_currency) },
-            { label: 'Exchange rate', value: `1 ${p.source_currency} = ${parseFloat(p.exchange_rate).toFixed(4)} ${p.dest_currency}` },
-            { label: 'They receive', value: formatMoney(p.dest_amount, p.dest_currency) },
-            { label: 'Purpose', value: p.purpose_code },
-            ...(p.reference ? [{ label: 'Reference', value: p.reference, mono: true }] : []),
-            { label: 'Created', value: formatDateTime(p.created_at) },
-            ...(p.completed_at ? [{ label: 'Completed', value: formatDateTime(p.completed_at) }] : []),
-            { label: 'Payment ID', value: p.id, mono: true },
-          ].map(({ label, value, mono }) => (
-            <View key={label} style={styles.detailRow}>
-              <Text style={styles.detailLabel}>{label}</Text>
-              <Text style={[styles.detailValue, mono && styles.detailValueMono]} numberOfLines={2}>{value}</Text>
-            </View>
-          ))}
-        </Card>
+        {/* ── Recipient ── */}
+        <SectionHeader icon="person-outline" title="Recipient" />
+        <View style={s.card}>
+          <InfoRow label="Name" value={p.beneficiary_name ?? '—'} />
+          <InfoRow label="Country" value={p.beneficiary_country_code ?? '—'} last />
+        </View>
 
-        {/* Status timeline */}
+        {/* ── Details ── */}
+        <SectionHeader icon="document-text-outline" title="Details" />
+        <View style={s.card}>
+          <InfoRow label="Purpose" value={p.purpose_code} />
+          {p.reference && (
+            <InfoRow label="Reference" value={p.reference} mono copyable />
+          )}
+          <InfoRow label="Submitted" value={formatDateTime(p.created_at)} />
+          {p.completed_at && (
+            <InfoRow label="Completed" value={formatDateTime(p.completed_at)} />
+          )}
+          <InfoRow label="Payment ID" value={p.id} mono copyable last />
+        </View>
+
+        {/* ── Timeline ── */}
         {history.length > 0 && (
           <>
-            <Text style={styles.sectionLabel}>Timeline</Text>
-            <Card padded={false} style={styles.timelineCard}>
+            <SectionHeader icon="time-outline" title="Timeline" />
+            <View style={s.card}>
               {history.map((h, idx) => {
                 const isLast = idx === history.length - 1
-                const color = statusColor(h.status)
+                const isCurrent = idx === 0
+                const hc = statusColor(h.status)
                 return (
-                  <View key={h.id} style={styles.timelineRow}>
-                    <View style={styles.timelineLeft}>
-                      <View style={[styles.dot, { backgroundColor: color }]} />
-                      {!isLast && <View style={styles.line} />}
+                  <View key={h.id} style={s.timelineRow}>
+                    {/* Connector column */}
+                    <View style={s.timelineTrack}>
+                      <View style={[
+                        s.timelineDot,
+                        { backgroundColor: isCurrent ? hc : hc + '60', borderColor: isCurrent ? hc + '44' : 'transparent' },
+                      ]}>
+                        <Ionicons name={statusIcon(h.status)} size={10} color={isCurrent ? colors.white : hc} />
+                      </View>
+                      {!isLast && <View style={s.timelineLine} />}
                     </View>
-                    <View style={[styles.timelineContent, isLast && styles.timelineContentLast]}>
-                      <Text style={[styles.timelineStatus, { color }]}>{statusLabel(h.status)}</Text>
-                      <Text style={styles.timelineDate}>{formatDateTime(h.created_at)}</Text>
-                      {h.notes && <Text style={styles.timelineNote}>{h.notes}</Text>}
+
+                    {/* Content */}
+                    <View style={[s.timelineContent, isLast && s.timelineContentLast]}>
+                      <Text style={[s.timelineStatus, { color: isCurrent ? hc : colors.textSecondary }]}>
+                        {statusLabel(h.status)}
+                      </Text>
+                      <Text style={s.timelineDate}>{formatDateTime(h.created_at)}</Text>
+                      {h.notes && (
+                        <View style={s.timelineNoteWrap}>
+                          <Text style={s.timelineNote}>{h.notes}</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 )
               })}
-            </Card>
+            </View>
           </>
         )}
       </ScrollView>
@@ -95,53 +227,122 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  handleWrap: { alignItems: 'center', paddingTop: spacing.sm },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border },
+
+  handleBar: { alignItems: 'center', paddingTop: spacing.sm, paddingBottom: spacing.xs },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border },
+
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: screenPadding, paddingVertical: spacing.base,
+    paddingHorizontal: screenPadding, paddingBottom: spacing.md,
   },
-  title: { fontSize: fontSize.lg, fontWeight: '700', color: colors.textPrimary },
-  scroll: { padding: spacing.xl, gap: spacing.base, paddingBottom: spacing['3xl'] },
+  headerTitle: { fontSize: fontSize.base, fontWeight: '700', color: colors.textPrimary },
+  closeBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
 
+  scroll: { paddingHorizontal: screenPadding, paddingBottom: spacing['4xl'], gap: spacing.md },
+
+  // ── Hero ──
   hero: {
-    alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm,
-    backgroundColor: colors.card, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, borderTopWidth: 3,
+    borderRadius: radius.xl,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', gap: spacing.md,
+    paddingTop: spacing['2xl'], paddingBottom: spacing.xl,
+    overflow: 'hidden',
   },
-  heroIconWrap: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  heroAmount: { fontSize: fontSize['3xl'], fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5 },
-  heroRoute: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  heroRouteCcy: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: '600' },
-  heroRouteDest: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: '600', marginLeft: spacing.xs },
+  heroGlow: {
+    position: 'absolute', top: -60, width: 200, height: 200, borderRadius: 100,
+  },
+  heroStatusIcon: {
+    width: 60, height: 60, borderRadius: 30,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5,
+  },
+  heroAmount: {
+    fontSize: 40, fontWeight: '800', color: colors.textPrimary,
+    letterSpacing: -1.5, lineHeight: 46,
+  },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderWidth: 1,
+  },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: fontSize.xs, fontWeight: '700', letterSpacing: 0.3 },
 
-  sectionLabel: {
-    fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted,
-    textTransform: 'uppercase', letterSpacing: 0.8,
+  routeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    marginTop: spacing.xs, marginHorizontal: screenPadding, width: '100%',
+    paddingHorizontal: spacing.lg,
+  },
+  routeBox: {
+    flex: 1, backgroundColor: colors.surface,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    gap: 3,
+  },
+  routeBoxRight: { alignItems: 'flex-end' },
+  routeCcy: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '700', letterSpacing: 0.5 },
+  routeAmt: { fontSize: fontSize.sm, fontWeight: '800', color: colors.textPrimary },
+  routeArrow: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
   },
 
-  detailsCard: { gap: spacing.xs },
-  detailRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border,
+  // ── Section header ──
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs,
   },
-  detailLabel: { fontSize: fontSize.sm, color: colors.textMuted, flex: 1 },
-  detailValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flex: 1.5 },
-  detailValueMono: { fontFamily: 'monospace', fontSize: fontSize.xs, color: colors.textSecondary },
+  sectionIconWrap: {
+    width: 20, height: 20, borderRadius: 6,
+    backgroundColor: colors.primaryFaded, alignItems: 'center', justifyContent: 'center',
+  },
+  sectionTitle: { fontSize: fontSize.xs, fontWeight: '700', color: colors.textPrimary, letterSpacing: 0.3 },
 
-  timelineCard: { overflow: 'hidden' },
+  // ── Info card ──
+  card: {
+    backgroundColor: colors.card, borderRadius: radius.xl,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+  },
+  infoRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: spacing.base, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+    gap: spacing.md,
+  },
+  infoRowLast: { borderBottomWidth: 0 },
+  infoLabel: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1 },
+  infoValueWrap: { flexDirection: 'row', alignItems: 'center', flex: 1.6, justifyContent: 'flex-end' },
+  infoValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary, textAlign: 'right' },
+  infoValueMono: {
+    fontFamily: 'monospace', fontSize: 10,
+    color: colors.textSecondary, letterSpacing: 0.3,
+  },
+
+  // ── Timeline ──
   timelineRow: { flexDirection: 'row' },
-  timelineLeft: { width: 40, alignItems: 'center', paddingTop: spacing.base },
-  dot: { width: 10, height: 10, borderRadius: 5, zIndex: 1 },
-  line: { flex: 1, width: 2, backgroundColor: colors.border, marginTop: 2 },
+  timelineTrack: { width: 44, alignItems: 'center', paddingTop: spacing.md },
+  timelineDot: {
+    width: 24, height: 24, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, zIndex: 1,
+  },
+  timelineLine: { flex: 1, width: 2, backgroundColor: colors.border, marginVertical: 2 },
   timelineContent: {
     flex: 1, paddingVertical: spacing.md, paddingRight: spacing.base,
-    borderBottomWidth: 1, borderBottomColor: colors.border, gap: 2,
+    borderBottomWidth: 1, borderBottomColor: colors.border, gap: 3,
   },
   timelineContentLast: { borderBottomWidth: 0 },
   timelineStatus: { fontSize: fontSize.sm, fontWeight: '700' },
   timelineDate: { fontSize: fontSize.xs, color: colors.textMuted },
-  timelineNote: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  timelineNoteWrap: {
+    marginTop: 4, backgroundColor: colors.surface,
+    borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
+  },
+  timelineNote: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
 })
