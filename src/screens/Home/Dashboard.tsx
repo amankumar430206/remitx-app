@@ -187,14 +187,6 @@ export function Dashboard() {
   const initials = ((user?.first_name?.[0] ?? '') + (user?.last_name?.[0] ?? '')).toUpperCase() || firstName[0]?.toUpperCase() || 'U'
   const roleLabel = user?.role?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ?? ''
 
-  const currencyTotals = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const acc of (accounts ?? [])) {
-      const ccy = (acc.currency ?? 'USD').toUpperCase()
-      map[ccy] = (map[ccy] ?? 0) + parseFloat(acc.balance ?? '0')
-    }
-    return Object.entries(map).map(([currency, total]) => ({ currency, total }))
-  }, [accounts])
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -229,33 +221,6 @@ export function Dashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Portfolio strip ── */}
-        {!loadingAccounts && (accounts ?? []).length > 0 && (
-          <View style={s.portfolioStrip}>
-            <Text style={s.portfolioLabel}>Balances</Text>
-            <View style={s.portfolioCcyGrid}>
-              {currencyTotals.map(({ currency, total }) => (
-                <View key={currency} style={s.portfolioCcyItem}>
-                  <Text style={s.portfolioCcyCode}>{currency}</Text>
-                  <Text style={s.portfolioCcyAmount}>{formatMoney(total, currency)}</Text>
-                </View>
-              ))}
-            </View>
-            <View style={s.portfolioMeta}>
-              <View style={s.portfolioMetaItem}>
-                <View style={[s.portfolioMetaDot, { backgroundColor: colors.success }]} />
-                <Text style={s.portfolioMetaText}>
-                  {(accounts ?? []).filter((a) => a.status === 'active').length} active accounts
-                </Text>
-              </View>
-              <View style={s.portfolioMetaSep} />
-              <View style={s.portfolioMetaItem}>
-                <Ionicons name="trending-up" size={12} color={colors.success} />
-                <Text style={[s.portfolioMetaText, { color: colors.success }]}>All systems normal</Text>
-              </View>
-            </View>
-          </View>
-        )}
 
         {/* ── Account cards ── */}
         {loadingAccounts
@@ -400,44 +365,6 @@ const createStyles = (c: Colors) => StyleSheet.create({
   bellBadgeText: { fontSize: 8, fontWeight: '900', color: c.white },
 
   loader: { marginVertical: spacing.xl },
-
-  // ── Portfolio strip ──
-  portfolioStrip: {
-    backgroundColor: c.surface,
-    paddingHorizontal: screenPadding,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-    marginBottom: spacing.xl,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: c.border,
-  },
-  portfolioLabel: {
-    fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
-    textTransform: 'uppercase', letterSpacing: 1,
-    marginBottom: spacing.md,
-  },
-  portfolioCcyGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    gap: spacing.lg, marginBottom: spacing.md,
-  },
-  portfolioCcyItem: {
-    gap: 3,
-    minWidth: '40%',
-  },
-  portfolioCcyCode: {
-    fontSize: fontSize.xs, fontWeight: '700', color: c.textMuted,
-    textTransform: 'uppercase', letterSpacing: 0.8,
-  },
-  portfolioCcyAmount: {
-    fontSize: fontSize['2xl'], fontWeight: '800',
-    color: c.textPrimary, letterSpacing: -0.5,
-  },
-  portfolioMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  portfolioMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  portfolioMetaDot: { width: 6, height: 6, borderRadius: 3 },
-  portfolioMetaText: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '500' },
-  portfolioMetaSep: { width: 1, height: 12, backgroundColor: c.border },
 
   // ── Account cards ──
   sectionTitle2: { fontSize: fontSize.sm, fontWeight: '700', color: c.textMuted, letterSpacing: 0.5, textTransform: 'uppercase', paddingHorizontal: screenPadding, marginBottom: spacing.sm },
