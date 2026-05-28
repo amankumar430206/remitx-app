@@ -157,10 +157,32 @@ export function PaymentHistory() {
     queryFn: () => paymentsApi.list(queryParams).then((r) => r.data.data),
   })
 
-  const sections  = useMemo(() => groupByDate(data ?? []), [data])
+  // ── Stat filter ──
+  type StatFilter = 'completed' | 'pending' | 'failed' | null
+  const [activeStatFilter, setActiveStatFilter] = useState<StatFilter>(null)
+
+  const STAT_STATUSES: Record<NonNullable<StatFilter>, string[]> = {
+    completed: ['completed'],
+    pending:   ['pending_approval', 'processing'],
+    failed:    ['rejected', 'failed', 'cancelled'],
+  }
+
+  const toggleStatFilter = (key: StatFilter) =>
+    setActiveStatFilter(prev => prev === key ? null : key)
+
+  // Counts always from full data (stat chips stay honest)
   const completedCount = useMemo(() => (data ?? []).filter((p) => p.status === 'completed').length, [data])
   const pendingCount   = useMemo(() => (data ?? []).filter((p) => ['pending_approval', 'processing'].includes(p.status)).length, [data])
   const failedCount    = useMemo(() => (data ?? []).filter((p) => ['rejected', 'failed', 'cancelled'].includes(p.status)).length, [data])
+
+  // List filtered by active stat chip (client-side, instant)
+  const visibleData = useMemo(() => {
+    if (!activeStatFilter) return data ?? []
+    const statuses = STAT_STATUSES[activeStatFilter]
+    return (data ?? []).filter((p) => statuses.includes(p.status))
+  }, [data, activeStatFilter])
+
+  const sections = useMemo(() => groupByDate(visibleData), [visibleData])
 
   const openNew = () => { setNewPaymentKey(k => k + 1); setShowNew(true) }
 
@@ -189,6 +211,7 @@ export function PaymentHistory() {
     setPreset('30d')
     setDateRange(presetToRange('30d'))
     setStatusFilter('')
+    setActiveStatFilter(null)
   }
 
   return (
@@ -293,20 +316,27 @@ export function PaymentHistory() {
       {data && data.length > 0 && (
         <View style={s.statsRow}>
           {([
-            { label: 'Total',     value: data.length,    icon: 'swap-horizontal',  color: colors.primary },
-            { label: 'Completed', value: completedCount, icon: 'checkmark-circle', color: colors.success },
-            { label: 'Pending',   value: pendingCount,   icon: 'time',             color: colors.warning },
-            { label: 'Failed',    value: failedCount,    icon: 'close-circle',     color: colors.danger  },
-          ] as const).map(({ label, value, icon, color }, i, arr) => (
-            <React.Fragment key={label}>
-              <View style={s.statTile}>
-                <Ionicons name={icon} size={14} color={color} />
-                <Text style={[s.statValue, { color }]}>{value}</Text>
-                <Text style={s.statLabel}>{label}</Text>
-              </View>
-              {i < arr.length - 1 && <View style={s.statSep} />}
-            </React.Fragment>
-          ))}
+            { label: 'Total',     key: null,          value: data.length,    icon: 'swap-horizontal',  color: colors.primary },
+            { label: 'Completed', key: 'completed',   value: completedCount, icon: 'checkmark-circle', color: colors.success },
+            { label: 'Pending',   key: 'pending',     value: pendingCount,   icon: 'time',             color: colors.warning },
+            { label: 'Failed',    key: 'failed',      value: failedCount,    icon: 'close-circle',     color: colors.danger  },
+          ] as const).map(({ label, key, value, icon, color }, i, arr) => {
+            const isActive = activeStatFilter === key
+            return (
+              <React.Fragment key={label}>
+                <TouchableOpacity
+                  style={[s.statTile, isActive && { backgroundColor: color + '12' }]}
+                  onPress={() => toggleStatFilter(key as StatFilter)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={icon} size={14} color={color} />
+                  <Text style={[s.statValue, { color }]}>{value}</Text>
+                  <Text style={[s.statLabel, isActive && { color: color }]}>{label}</Text>
+                </TouchableOpacity>
+                {i < arr.length - 1 && <View style={s.statSep} />}
+              </React.Fragment>
+            )
+          })}
         </View>
       )}
 
