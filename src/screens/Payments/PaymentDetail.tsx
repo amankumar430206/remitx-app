@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Clipboard, Alert,
@@ -6,10 +6,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
+import * as Print from 'expo-print'
+import * as Sharing from 'expo-sharing'
 import { type Payment } from '@/api/payments'
 import { colors } from '@/theme/colors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatDateTime, statusColor, statusLabel } from '@/utils/format'
+import { buildReceiptHtml } from '@/utils/receipt'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -84,6 +87,29 @@ interface Props { payment: Payment; onClose: () => void }
 export function PaymentDetail({ payment: p, onClose }: Props) {
   const history = p.status_history ?? []
   const sc = statusColor(p.status)
+  const [sharing, setSharing] = useState(false)
+
+  const handleShareReceipt = async () => {
+    try {
+      setSharing(true)
+      const html = buildReceiptHtml(p)
+      const { uri } = await Print.printToFileAsync({ html, base64: false })
+      const canShare = await Sharing.isAvailableAsync()
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Share Payment Receipt',
+          UTI: 'com.adobe.pdf',
+        })
+      } else {
+        Alert.alert('Sharing unavailable', 'Sharing is not supported on this device.')
+      }
+    } catch {
+      Alert.alert('Error', 'Could not generate the receipt. Please try again.')
+    } finally {
+      setSharing(false)
+    }
+  }
   const totalDebit = parseFloat(p.source_amount) + parseFloat(p.fee_amount)
   const hasFee = parseFloat(p.fee_amount) > 0
 
@@ -95,9 +121,14 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
       {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>Payment details</Text>
-        <TouchableOpacity style={s.closeBtn} onPress={onClose} activeOpacity={0.7}>
-          <Ionicons name="close" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+        <View style={s.headerActions}>
+          <TouchableOpacity style={s.headerBtn} onPress={handleShareReceipt} disabled={sharing} activeOpacity={0.7}>
+            <Ionicons name={sharing ? 'hourglass-outline' : 'share-outline'} size={17} color={sharing ? colors.textDisabled : colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.closeBtn} onPress={onClose} activeOpacity={0.7}>
+            <Ionicons name="close" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -182,6 +213,25 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
           <InfoRow label="Payment ID" value={p.id} mono copyable last />
         </View>
 
+        {/* ── Share receipt CTA ── */}
+        <TouchableOpacity style={s.shareBtn} onPress={handleShareReceipt} disabled={sharing} activeOpacity={0.8}>
+          <LinearGradient
+            colors={sharing ? [colors.surface, colors.surface] : ['#6366F1', '#818CF8']}
+            style={s.shareBtnInner}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          >
+            <Ionicons
+              name={sharing ? 'hourglass-outline' : 'document-text-outline'}
+              size={18}
+              color={sharing ? colors.textDisabled : colors.white}
+            />
+            <Text style={[s.shareBtnText, sharing && { color: colors.textDisabled }]}>
+              {sharing ? 'Generating PDF…' : 'Share receipt'}
+            </Text>
+            {!sharing && <Ionicons name="share-outline" size={16} color={colors.white + 'cc'} />}
+          </LinearGradient>
+        </TouchableOpacity>
+
         {/* ── Timeline ── */}
         {history.length > 0 && (
           <>
@@ -238,11 +288,25 @@ const s = StyleSheet.create({
     paddingHorizontal: screenPadding, paddingBottom: spacing.md,
   },
   headerTitle: { fontSize: fontSize.base, fontWeight: '700', color: colors.textPrimary },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: colors.primaryFaded, borderWidth: 1, borderColor: colors.primary + '40',
+    alignItems: 'center', justifyContent: 'center',
+  },
   closeBtn: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
+
+  shareBtn: { borderRadius: radius.xl, overflow: 'hidden' },
+  shareBtnInner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, paddingVertical: spacing.md,
+    borderRadius: radius.xl,
+  },
+  shareBtnText: { fontSize: fontSize.sm, fontWeight: '700', color: colors.white },
 
   scroll: { paddingHorizontal: screenPadding, paddingBottom: spacing['4xl'], gap: spacing.md },
 
