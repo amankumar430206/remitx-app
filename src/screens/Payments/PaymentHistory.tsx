@@ -312,32 +312,35 @@ export function PaymentHistory() {
         </View>
       )}
 
-      {/* ── Stats ── */}
+      {/* ── Stat pills ── */}
       {data && data.length > 0 && (
-        <View style={s.statsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.statPillRow}
+          style={s.statPillScroll}
+        >
           {([
-            { label: 'Total',     key: null,          value: data.length,    icon: 'swap-horizontal',  color: colors.primary },
-            { label: 'Completed', key: 'completed',   value: completedCount, icon: 'checkmark-circle', color: colors.success },
-            { label: 'Pending',   key: 'pending',     value: pendingCount,   icon: 'time',             color: colors.warning },
-            { label: 'Failed',    key: 'failed',      value: failedCount,    icon: 'close-circle',     color: colors.danger  },
-          ] as const).map(({ label, key, value, icon, color }, i, arr) => {
+            { label: 'Total',     key: null,        value: data.length,    icon: 'swap-horizontal',  color: colors.primary },
+            { label: 'Completed', key: 'completed', value: completedCount, icon: 'checkmark-circle', color: colors.success },
+            { label: 'Pending',   key: 'pending',   value: pendingCount,   icon: 'time',             color: colors.warning },
+            { label: 'Failed',    key: 'failed',    value: failedCount,    icon: 'close-circle',     color: colors.danger  },
+          ] as const).map(({ label, key, value, icon, color }) => {
             const isActive = activeStatFilter === key
             return (
-              <React.Fragment key={label}>
-                <TouchableOpacity
-                  style={[s.statTile, isActive && { backgroundColor: color + '15', borderRadius: radius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm }]}
-                  onPress={() => toggleStatFilter(key as StatFilter)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name={icon} size={14} color={color} />
-                  <Text style={[s.statValue, { color }]}>{value}</Text>
-                  <Text style={[s.statLabel, isActive && { color: color }]}>{label}</Text>
-                </TouchableOpacity>
-                {i < arr.length - 1 && <View style={s.statSep} />}
-              </React.Fragment>
+              <TouchableOpacity
+                key={label}
+                style={[s.statPill, { borderColor: color + '50' }, isActive && { backgroundColor: color, borderColor: color }]}
+                onPress={() => toggleStatFilter(key as StatFilter)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name={icon} size={13} color={isActive ? colors.white : color} />
+                <Text style={[s.statPillCount, { color: isActive ? colors.white : color }]}>{value}</Text>
+                <Text style={[s.statPillLabel, { color: isActive ? colors.white + 'cc' : colors.textMuted }]}>{label}</Text>
+              </TouchableOpacity>
             )
           })}
-        </View>
+        </ScrollView>
       )}
 
       {/* ── List ── */}
@@ -501,18 +504,20 @@ const createStyles = (c: Colors) => StyleSheet.create({
   activeRange: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '500' },
   clearText: { fontSize: fontSize.xs, color: c.danger, fontWeight: '600' },
 
-  // Stats
-  statsRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: screenPadding, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: c.border,
+  // Stat pills
+  statPillScroll: { marginBottom: spacing.sm },
+  statPillRow: {
+    flexDirection: 'row', gap: spacing.sm,
+    paddingHorizontal: screenPadding, paddingVertical: spacing.xs,
   },
-  statTile: {
-    flex: 1, alignItems: 'center', gap: 3,
+  statPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderRadius: radius.full, borderWidth: 1,
+    backgroundColor: c.surface,
+    paddingHorizontal: 12, paddingVertical: 7,
   },
-  statSep: { width: 1, height: 28, backgroundColor: c.border },
-  statValue: { fontSize: fontSize.base, fontWeight: '800' },
-  statLabel: { fontSize: 10, color: c.textMuted, fontWeight: '600', textAlign: 'center' },
+  statPillCount: { fontSize: fontSize.sm, fontWeight: '800' },
+  statPillLabel: { fontSize: fontSize.xs, fontWeight: '600' },
 
   // List
   scroll: { paddingBottom: spacing['3xl'], gap: spacing.xs },
