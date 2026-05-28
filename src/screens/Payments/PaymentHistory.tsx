@@ -158,8 +158,9 @@ export function PaymentHistory() {
   })
 
   const sections  = useMemo(() => groupByDate(data ?? []), [data])
-  const totalVol  = useMemo(() => (data ?? []).reduce((sum, p) => sum + parseFloat(p.source_amount ?? '0'), 0), [data])
-  const completedCount = (data ?? []).filter((p) => p.status === 'completed').length
+  const completedCount = useMemo(() => (data ?? []).filter((p) => p.status === 'completed').length, [data])
+  const pendingCount   = useMemo(() => (data ?? []).filter((p) => ['pending_approval', 'processing'].includes(p.status)).length, [data])
+  const failedCount    = useMemo(() => (data ?? []).filter((p) => ['rejected', 'failed', 'cancelled'].includes(p.status)).length, [data])
 
   const openNew = () => { setNewPaymentKey(k => k + 1); setShowNew(true) }
 
@@ -291,20 +292,20 @@ export function PaymentHistory() {
       {/* ── Stats ── */}
       {data && data.length > 0 && (
         <View style={s.statsRow}>
-          <View style={s.statCard}>
-            <Text style={s.statValue}>{data.length}</Text>
-            <Text style={s.statLabel}>Total</Text>
-          </View>
-          <View style={s.statDivider} />
-          <View style={s.statCard}>
-            <Text style={s.statValue}>{completedCount}</Text>
-            <Text style={s.statLabel}>Completed</Text>
-          </View>
-          <View style={s.statDivider} />
-          <View style={s.statCard}>
-            <Text style={[s.statValue, { color: colors.primary }]}>${Math.floor(totalVol).toLocaleString()}</Text>
-            <Text style={s.statLabel}>Volume (USD)</Text>
-          </View>
+          {([
+            { label: 'Total',     value: data.length,    icon: 'swap-horizontal',  color: colors.primary },
+            { label: 'Completed', value: completedCount, icon: 'checkmark-circle', color: colors.success },
+            { label: 'Pending',   value: pendingCount,   icon: 'time',             color: colors.warning },
+            { label: 'Failed',    value: failedCount,    icon: 'close-circle',     color: colors.danger  },
+          ] as const).map(({ label, value, icon, color }) => (
+            <View key={label} style={s.statTile}>
+              <View style={[s.statIconWrap, { backgroundColor: color + '18' }]}>
+                <Ionicons name={icon} size={15} color={color} />
+              </View>
+              <Text style={[s.statValue, { color }]}>{value}</Text>
+              <Text style={s.statLabel}>{label}</Text>
+            </View>
+          ))}
         </View>
       )}
 
@@ -470,18 +471,26 @@ const createStyles = (c: Colors) => StyleSheet.create({
   activeRange: { fontSize: fontSize.xs, color: c.textMuted, fontWeight: '500' },
   clearText: { fontSize: fontSize.xs, color: c.danger, fontWeight: '600' },
 
-  // Stats strip
+  // Stats
   statsRow: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row',
     marginHorizontal: screenPadding, marginTop: spacing.sm, marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  statTile: {
+    flex: 1, alignItems: 'center',
     backgroundColor: c.card,
     borderRadius: radius.lg, borderWidth: 1, borderColor: c.border,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.xs,
+    gap: 3,
   },
-  statCard: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: fontSize.lg, fontWeight: '800', color: c.textPrimary },
-  statLabel: { fontSize: fontSize.xs, color: c.textMuted, marginTop: 2 },
-  statDivider: { width: 1, height: 32, backgroundColor: c.border },
+  statIconWrap: {
+    width: 28, height: 28, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 2,
+  },
+  statValue: { fontSize: fontSize.base, fontWeight: '800' },
+  statLabel: { fontSize: 10, color: c.textMuted, fontWeight: '600', textAlign: 'center' },
 
   // List
   scroll: { paddingBottom: spacing['3xl'], gap: spacing.xs },
