@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import {
-  View, Text, StyleSheet, FlatList,
-  TouchableOpacity, RefreshControl, Modal, SectionList,
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, RefreshControl, Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -38,17 +38,20 @@ function groupByDate(payments: Payment[]): Section[] {
   return Array.from(map.entries()).map(([title, data]) => ({ title, data }))
 }
 
-function PaymentRow({ item, onPress }: { item: Payment; onPress: () => void }) {
+function PaymentRow({ item, isLast, onPress }: { item: Payment; isLast: boolean; onPress: () => void }) {
   const sc = statusColor(item.status)
-
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={[styles.row, !isLast && styles.rowBorder]}
+      onPress={onPress}
+      activeOpacity={0.65}
+    >
       <View style={[styles.rowIcon, { backgroundColor: sc + '18' }]}>
         <Ionicons name="swap-horizontal" size={19} color={sc} />
       </View>
       <View style={styles.rowMeta}>
         <Text style={styles.rowBene} numberOfLines={1}>{item.beneficiary_name ?? 'Beneficiary'}</Text>
-        <View style={styles.rowRouteRow}>
+        <View style={styles.rowSubRow}>
           <Text style={styles.rowRoute}>{item.source_currency}</Text>
           <Ionicons name="arrow-forward" size={10} color={colors.textDisabled} />
           <Text style={styles.rowRoute}>{item.dest_currency}</Text>
@@ -76,12 +79,10 @@ export function PaymentHistory() {
   })
 
   const sections = useMemo(() => groupByDate(data ?? []), [data])
-
-  const totalVol = useMemo(() => {
-    return (data ?? []).reduce((s, p) => s + parseFloat(p.source_amount ?? '0'), 0)
-  }, [data])
-
+  const totalVol = useMemo(() => (data ?? []).reduce((s, p) => s + parseFloat(p.source_amount ?? '0'), 0), [data])
   const completedCount = (data ?? []).filter((p) => p.status === 'completed').length
+
+  const openNew = () => { setNewPaymentKey(k => k + 1); setShowNew(true) }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -93,7 +94,7 @@ export function PaymentHistory() {
             <Text style={styles.subtitle}>{data.length} transaction{data.length !== 1 ? 's' : ''}</Text>
           )}
         </View>
-        <TouchableOpacity style={styles.newBtn} onPress={() => { setNewPaymentKey(k => k + 1); setShowNew(true) }} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.newBtn} onPress={openNew} activeOpacity={0.85}>
           <LinearGradient colors={['#6366F1', '#818CF8']} style={styles.newBtnGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <Ionicons name="add" size={18} color={colors.white} />
             <Text style={styles.newBtnText}>New payment</Text>
@@ -121,33 +122,43 @@ export function PaymentHistory() {
         </View>
       )}
 
-      <SectionList
-        sections={sections}
-        keyExtractor={(i) => i.id}
-        renderItem={({ item }) => (
-          <PaymentRow item={item} onPress={() => setSelected(item)} />
-        )}
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>{section.title}</Text>
-            <View style={styles.sectionLine} />
-          </View>
-        )}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
-        contentContainerStyle={styles.list}
-        stickySectionHeadersEnabled={false}
-        ListEmptyComponent={
-          !isLoading ? (
-            <EmptyState
-              icon="swap-horizontal-outline"
-              title="No payments yet"
-              subtitle="Send your first international transfer in minutes"
-              actionLabel="New payment"
-              onAction={() => { setNewPaymentKey(k => k + 1); setShowNew(true) }}
-            />
-          ) : null
-        }
-      />
+        contentContainerStyle={styles.scroll}
+      >
+        {sections.length === 0 && !isLoading ? (
+          <EmptyState
+            icon="swap-horizontal-outline"
+            title="No payments yet"
+            subtitle="Send your first international transfer in minutes"
+            actionLabel="New payment"
+            onAction={openNew}
+          />
+        ) : (
+          sections.map((section) => (
+            <View key={section.title}>
+              {/* Section label */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionLabel}>{section.title}</Text>
+                <View style={styles.sectionLine} />
+              </View>
+
+              {/* Grouped card */}
+              <View style={styles.group}>
+                {section.data.map((item, idx) => (
+                  <PaymentRow
+                    key={item.id}
+                    item={item}
+                    isLast={idx === section.data.length - 1}
+                    onPress={() => setSelected(item)}
+                  />
+                ))}
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
 
       <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelected(null)}>
         {selected && <PaymentDetail payment={selected} onClose={() => setSelected(null)} />}
@@ -181,8 +192,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: screenPadding, marginBottom: spacing.base,
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
     paddingVertical: spacing.md,
   },
   statCard: { flex: 1, alignItems: 'center' },
@@ -190,29 +200,40 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   statDivider: { width: 1, height: 32, backgroundColor: colors.border },
 
-  list: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'] },
+  scroll: { paddingBottom: spacing['3xl'], gap: spacing.xs },
 
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: screenPadding,
     paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
-  sectionLabel: { fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.5, textTransform: 'uppercase' },
+  sectionLabel: {
+    fontSize: fontSize.xs, fontWeight: '700', color: colors.textMuted,
+    letterSpacing: 0.5, textTransform: 'uppercase',
+  },
   sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
 
+  // Grouped card container
+  group: {
+    marginHorizontal: screenPadding,
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    borderWidth: 1, borderColor: colors.border,
+    overflow: 'hidden',
+  },
+
+  // Row inside group
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.base, paddingVertical: spacing.md,
   },
-  rowIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  rowMeta: { flex: 1, gap: 4 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  rowIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  rowMeta: { flex: 1, gap: 3 },
   rowBene: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
-  rowRouteRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  rowSubRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rowRoute: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: '500' },
-  rowDot: { color: colors.textDisabled },
+  rowDot: { color: colors.textDisabled, fontSize: fontSize.xs },
   rowTime: { fontSize: fontSize.xs, color: colors.textMuted },
   rowRight: { alignItems: 'flex-end', gap: 3, flexShrink: 0 },
   rowAmt: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
