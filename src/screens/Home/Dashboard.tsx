@@ -229,7 +229,7 @@ export function Dashboard() {
             <View style={s.portfolioBalanceRow}>
               <Text style={s.portfolioCurrency}>$</Text>
               <Text style={s.portfolioAmount}>{Math.floor(totalUsd).toLocaleString('en-US')}</Text>
-              <Text style={s.portfolioCents}>.{(totalUsd % 1).toFixed(2).slice(1)}</Text>
+              <Text style={s.portfolioCents}>{(totalUsd % 1).toFixed(2).slice(1)}</Text>
             </View>
             <View style={s.portfolioMeta}>
               <View style={s.portfolioMetaItem}>
