@@ -149,7 +149,7 @@ export function PaymentHistory() {
     to:      dateRange.to   ? toIso(dateRange.to)   : undefined,
   }), [statusFilter, dateRange])
 
-  const isFiltered = preset !== '30d' || !!statusFilter
+  const isFiltered = preset !== '30d' || !!statusFilter || !!activeStatFilter
 
   // ── Query ──
   const { data, isLoading, refetch } = useQuery({
@@ -222,7 +222,9 @@ export function PaymentHistory() {
         <View>
           <Text style={s.title}>Payments</Text>
           {data && data.length > 0 && (
-            <Text style={s.subtitle}>{data.length} transaction{data.length !== 1 ? 's' : ''}</Text>
+            <Text style={s.subtitle}>
+              {visibleData.length}{activeStatFilter ? ` of ${data.length}` : ''} transaction{visibleData.length !== 1 ? 's' : ''}
+            </Text>
           )}
         </View>
         <View style={s.headerRight}>
@@ -359,8 +361,8 @@ export function PaymentHistory() {
             onAction={isFiltered ? clearFilters : openNew}
           />
         ) : (
-          sections.map((section) => (
-            <View key={section.title}>
+          sections.map((section, sIdx) => (
+            <View key={section.title} style={sIdx > 0 ? s.sectionGap : undefined}>
               <View style={s.sectionHeader}>
                 <Text style={s.sectionLabel}>{section.title}</Text>
               </View>
@@ -506,10 +508,11 @@ const createStyles = (c: Colors) => StyleSheet.create({
   clearText: { fontSize: fontSize.xs, color: c.danger, fontWeight: '600' },
 
   // Stat pills
-  statPillScroll: { marginBottom: spacing.sm, paddingVertical: spacing.sm },
+  statPillScroll: { marginBottom: spacing.sm },
   statPillRow: {
     flexDirection: 'row', gap: spacing.sm,
     paddingHorizontal: screenPadding,
+    paddingVertical: spacing.sm,
   },
   statPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -522,7 +525,8 @@ const createStyles = (c: Colors) => StyleSheet.create({
 
   // List
   listScroll: { flex: 1 },
-  scroll: { paddingBottom: spacing['3xl'], gap: spacing.xs, flexGrow: 1 },
+  scroll: { flexGrow: 1, justifyContent: 'flex-start', paddingBottom: spacing['3xl'] },
+  sectionGap: { marginTop: spacing.xs },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: screenPadding,
