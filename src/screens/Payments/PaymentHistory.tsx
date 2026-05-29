@@ -3,6 +3,8 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, Modal, Animated, Platform,
 } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -10,11 +12,11 @@ import DateTimePicker from '@react-native-community/datetimepicker'
 import { useQuery } from '@tanstack/react-query'
 import paymentsApi, { type Payment } from '@/api/payments'
 import { useColors, type Colors } from '@/hooks/useColors'
+import { type PaymentsStackParamList } from '@/navigation/PaymentsStack'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo, statusColor } from '@/utils/format'
 import { StatusBadge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { PaymentDetail } from './PaymentDetail'
 import { NewPayment } from './NewPayment'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -113,11 +115,13 @@ function PaymentRow({ item, isLast, onPress, s, colors }: {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
+type Nav = NativeStackNavigationProp<PaymentsStackParamList>
+
 export function PaymentHistory() {
   const colors = useColors()
   const s = useMemo(() => createStyles(colors), [colors])
+  const navigation = useNavigation<Nav>()
 
-  const [selected, setSelected]         = useState<Payment | null>(null)
   const [showNew, setShowNew]           = useState(false)
   const [newPaymentKey, setNewPaymentKey] = useState(0)
 
@@ -343,7 +347,7 @@ export function PaymentHistory() {
                     key={item.id}
                     item={item}
                     isLast={idx === section.data.length - 1}
-                    onPress={() => setSelected(item)}
+                    onPress={() => navigation.navigate('PaymentDetail', { payment: item })}
                     s={s}
                     colors={colors}
                   />
@@ -392,11 +396,6 @@ export function PaymentHistory() {
           />
         )
       )}
-
-      {/* ── Detail modal ── */}
-      <Modal visible={!!selected} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelected(null)}>
-        {selected && <PaymentDetail payment={selected} onClose={() => setSelected(null)} />}
-      </Modal>
 
       {/* ── New payment modal ── */}
       <Modal visible={showNew} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowNew(false)}>

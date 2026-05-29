@@ -6,13 +6,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
+import { type RouteProp } from '@react-navigation/native'
+import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
-import { type Payment } from '@/api/payments'
 import { useColors, type Colors } from '@/hooks/useColors'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatDateTime, statusColor, statusLabel } from '@/utils/format'
 import { buildReceiptHtml } from '@/utils/receipt'
+import { type PaymentsStackParamList } from '@/navigation/PaymentsStack'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -89,9 +91,13 @@ function InfoRow({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-interface Props { payment: Payment; onClose: () => void }
+type Nav = NativeStackNavigationProp<PaymentsStackParamList, 'PaymentDetail'>
+type Route = RouteProp<PaymentsStackParamList, 'PaymentDetail'>
 
-export function PaymentDetail({ payment: p, onClose }: Props) {
+interface Props { navigation: Nav; route: Route }
+
+export function PaymentDetail({ navigation, route }: Props) {
+  const p = route.params.payment
   const colors = useColors()
   const s = useMemo(() => createStyles(colors), [colors])
   const history = p.status_history ?? []
@@ -123,21 +129,16 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
   const hasFee = parseFloat(p.fee_amount) > 0
 
   return (
-    <SafeAreaView style={s.safe}>
-      {/* Drag handle */}
-      <View style={s.handleBar}><View style={s.handle} /></View>
-
+    <SafeAreaView style={s.safe} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
+        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
         <Text style={s.headerTitle}>Payment details</Text>
-        <View style={s.headerActions}>
-          <TouchableOpacity style={s.headerBtn} onPress={handleShareReceipt} disabled={sharing} activeOpacity={0.7}>
-            <Ionicons name={sharing ? 'hourglass-outline' : 'share-outline'} size={17} color={sharing ? colors.textDisabled : colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={s.closeBtn} onPress={onClose} activeOpacity={0.7}>
-            <Ionicons name="close" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={s.headerBtn} onPress={handleShareReceipt} disabled={sharing} activeOpacity={0.7}>
+          <Ionicons name={sharing ? 'hourglass-outline' : 'share-outline'} size={17} color={sharing ? colors.textDisabled : colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -291,24 +292,24 @@ export function PaymentDetail({ payment: p, onClose }: Props) {
 const createStyles = (c: Colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.bg },
 
-  handleBar: { alignItems: 'center', paddingTop: spacing.sm, paddingBottom: spacing.xs },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: c.border },
-
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: screenPadding, paddingBottom: spacing.md,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.sm, paddingBottom: spacing.md,
+    gap: spacing.sm,
   },
-  headerTitle: { fontSize: fontSize.base, fontWeight: '700', color: c.textPrimary },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  headerBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: c.primaryFaded, borderWidth: 1, borderColor: c.primary + '40',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  closeBtn: {
-    width: 32, height: 32, borderRadius: 16,
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: c.surface, borderWidth: 1, borderColor: c.border,
     alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  headerTitle: { flex: 1, fontSize: fontSize.base, fontWeight: '700', color: c.textPrimary },
+  headerBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: c.primaryFaded, borderWidth: 1, borderColor: c.primary + '40',
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
 
   shareBtn: { borderRadius: radius.xl, overflow: 'hidden' },

@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { type NavigatorScreenParams } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import { Platform, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Dashboard } from '@/screens/Home/Dashboard'
-import { PaymentHistory } from '@/screens/Payments/PaymentHistory'
+import { PaymentsStack, type PaymentsStackParamList } from '@/navigation/PaymentsStack'
 import { ApprovalQueue } from '@/screens/Approve/ApprovalQueue'
 import { AccountList } from '@/screens/Accounts/AccountList'
 import { SettingsStack } from '@/navigation/SettingsStack'
@@ -13,7 +14,7 @@ import { fontSize } from '@/theme/spacing'
 
 export type AppTabsParamList = {
   Dashboard: undefined
-  Payments: undefined
+  Payments: NavigatorScreenParams<PaymentsStackParamList> | undefined
   Approve: undefined
   Accounts: undefined
   Settings: undefined
@@ -65,7 +66,7 @@ export function AppTabs() {
       })}
     >
       <Tab.Screen name="Dashboard" component={Dashboard} />
-      <Tab.Screen name="Payments" component={PaymentHistory} />
+      <Tab.Screen name="Payments" component={PaymentsStack} />
       <Tab.Screen name="Approve" component={ApprovalQueue} />
       <Tab.Screen name="Accounts" component={AccountList} />
       <Tab.Screen name="Settings" component={SettingsStack} />

@@ -6,7 +6,9 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
+import { type CompositeNavigationProp } from '@react-navigation/native'
 import { type BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
+import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useQuery } from '@tanstack/react-query'
@@ -20,10 +22,13 @@ import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
 import { formatMoney, formatTimeAgo, statusColor, currencyColor } from '@/utils/format'
 import { StatusBadge } from '@/components/ui/Badge'
 import { type AppTabsParamList } from '@/navigation/AppTabs'
+import { type PaymentsStackParamList } from '@/navigation/PaymentsStack'
 import { Notifications } from '@/screens/Notifications'
-import { PaymentDetail } from '@/screens/Payments/PaymentDetail'
 
-type Nav = BottomTabNavigationProp<AppTabsParamList>
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<AppTabsParamList>,
+  NativeStackNavigationProp<PaymentsStackParamList>
+>
 
 const { width: SCREEN_W } = Dimensions.get('window')
 const CARD_W = SCREEN_W - screenPadding * 2
@@ -174,7 +179,6 @@ export function Dashboard() {
   const s = useMemo(() => createStyles(colors), [colors])
   const user = useAuthStore((st) => st.user)
   const [showNotifs, setShowNotifs] = useState(false)
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
   const { data: accounts, isLoading: loadingAccounts, refetch: refetchAccounts } =
     useQuery({ queryKey: ['accounts'], queryFn: () => accountsApi.list().then((r) => r.data.data) })
@@ -324,7 +328,7 @@ export function Dashboard() {
                     <TouchableOpacity
                       key={p.id}
                       style={[s.paymentRow, !isLast && s.paymentRowBorder]}
-                      onPress={() => setSelectedPayment(p)}
+                      onPress={() => navigation.navigate('Payments', { screen: 'PaymentDetail', params: { payment: p } })}
                       activeOpacity={0.65}
                     >
                       <View style={[s.paymentIcon, { backgroundColor: sc + '15' }]}>
@@ -353,9 +357,6 @@ export function Dashboard() {
         <Notifications onClose={() => setShowNotifs(false)} />
       </Modal>
 
-      <Modal visible={!!selectedPayment} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedPayment(null)}>
-        {selectedPayment && <PaymentDetail payment={selectedPayment} onClose={() => setSelectedPayment(null)} />}
-      </Modal>
     </SafeAreaView>
   )
 }
