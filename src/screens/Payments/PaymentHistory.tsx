@@ -141,6 +141,10 @@ export function PaymentHistory() {
     }).start()
   }, [filtersOpen])
 
+  // ── Stat filter (must be declared before isFiltered) ──
+  type StatFilter = 'completed' | 'pending' | 'failed' | null
+  const [activeStatFilter, setActiveStatFilter] = useState<StatFilter>(null)
+
   // ── Derived filter params ──
   const queryParams = useMemo(() => ({
     limit: 100,
@@ -156,10 +160,6 @@ export function PaymentHistory() {
     queryKey: ['payments', queryParams],
     queryFn: () => paymentsApi.list(queryParams).then((r) => r.data.data),
   })
-
-  // ── Stat filter ──
-  type StatFilter = 'completed' | 'pending' | 'failed' | null
-  const [activeStatFilter, setActiveStatFilter] = useState<StatFilter>(null)
 
   const STAT_STATUSES: Record<NonNullable<StatFilter>, string[]> = {
     completed: ['completed'],
@@ -217,133 +217,104 @@ export function PaymentHistory() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
 
-      {/* ── Header ── */}
-      <View style={s.header}>
-        <View>
-          <Text style={s.title}>Payments</Text>
-          {data && data.length > 0 && (
-            <Text style={s.subtitle}>
-              {visibleData.length}{activeStatFilter ? ` of ${data.length}` : ''} transaction{visibleData.length !== 1 ? 's' : ''}
-            </Text>
-          )}
-        </View>
-        <View style={s.headerRight}>
-          {/* Filter toggle */}
-          <TouchableOpacity style={[s.filterBtn, filtersOpen && s.filterBtnActive]} onPress={toggleFilters} activeOpacity={0.8}>
-            <Ionicons name="options-outline" size={18} color={filtersOpen ? colors.primary : colors.textSecondary} />
-            {isFiltered && <View style={s.filterDot} />}
-          </TouchableOpacity>
-
-          {/* New payment */}
-          <TouchableOpacity style={s.newBtn} onPress={openNew} activeOpacity={0.85}>
-            <LinearGradient colors={['#6366F1', '#818CF8']} style={s.newBtnGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Ionicons name="add" size={18} color={colors.white} />
-              <Text style={s.newBtnText}>New</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ── Filter panel ── */}
-      {filtersOpen && (
-        <View style={s.filterPanel}>
-
-          {/* Preset chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.presetRow}>
-            {PRESETS.map(p => (
-              <TouchableOpacity
-                key={p.value}
-                style={[s.chip, preset === p.value && s.chipActive]}
-                onPress={() => applyPreset(p.value)}
-                activeOpacity={0.7}
-              >
-                <Text style={[s.chipText, preset === p.value && s.chipTextActive]}>{p.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Custom date range row */}
-          {preset === 'custom' && (
-            <View style={s.dateRow}>
-              <TouchableOpacity style={s.dateBtn} onPress={() => openPicker('from')} activeOpacity={0.8}>
-                <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-                <Text style={s.dateBtnText}>
-                  {dateRange.from ? fmtShort(dateRange.from) : 'From date'}
-                </Text>
-              </TouchableOpacity>
-              <Ionicons name="arrow-forward" size={14} color={colors.textDisabled} />
-              <TouchableOpacity style={s.dateBtn} onPress={() => openPicker('to')} activeOpacity={0.8}>
-                <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-                <Text style={s.dateBtnText}>
-                  {dateRange.to ? fmtShort(dateRange.to) : 'To date'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Status chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.presetRow}>
-            {STATUS_FILTERS.map(sf => (
-              <TouchableOpacity
-                key={sf.value}
-                style={[s.chip, statusFilter === sf.value && s.chipActive]}
-                onPress={() => setStatusFilter(sf.value)}
-                activeOpacity={0.7}
-              >
-                <Text style={[s.chipText, statusFilter === sf.value && s.chipTextActive]}>{sf.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Active range summary + clear */}
-          <View style={s.filterFooter}>
-            <View style={s.activeRangeWrap}>
-              <Ionicons name="calendar" size={12} color={colors.primary} />
-              <Text style={s.activeRange}>
-                {dateRange.from && dateRange.to
-                  ? `${fmtShort(dateRange.from)} – ${fmtShort(dateRange.to)}`
-                  : 'All time'}
+      {/* ── Fixed top section ── */}
+      <View>
+        {/* Header */}
+        <View style={s.header}>
+          <View>
+            <Text style={s.title}>Payments</Text>
+            {data && data.length > 0 && (
+              <Text style={s.subtitle}>
+                {visibleData.length}{activeStatFilter ? ` of ${data.length}` : ''} transaction{visibleData.length !== 1 ? 's' : ''}
               </Text>
-            </View>
-            {isFiltered && (
-              <TouchableOpacity onPress={clearFilters} activeOpacity={0.7}>
-                <Text style={s.clearText}>Clear filters</Text>
-              </TouchableOpacity>
             )}
           </View>
+          <View style={s.headerRight}>
+            <TouchableOpacity style={[s.filterBtn, filtersOpen && s.filterBtnActive]} onPress={toggleFilters} activeOpacity={0.8}>
+              <Ionicons name="options-outline" size={18} color={filtersOpen ? colors.primary : colors.textSecondary} />
+              {isFiltered && <View style={s.filterDot} />}
+            </TouchableOpacity>
+            <TouchableOpacity style={s.newBtn} onPress={openNew} activeOpacity={0.85}>
+              <LinearGradient colors={['#6366F1', '#818CF8']} style={s.newBtnGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <Ionicons name="add" size={18} color={colors.white} />
+                <Text style={s.newBtnText}>New</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
-      )}
 
-      {/* ── Stat pills ── */}
-      {data && data.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.statPillRow}
-          style={s.statPillScroll}
-        >
-          {([
-            { label: 'Total',     key: null,        value: data.length,    icon: 'swap-horizontal',  color: colors.primary },
-            { label: 'Completed', key: 'completed', value: completedCount, icon: 'checkmark-circle', color: colors.success },
-            { label: 'Pending',   key: 'pending',   value: pendingCount,   icon: 'time',             color: colors.warning },
-            { label: 'Failed',    key: 'failed',    value: failedCount,    icon: 'close-circle',     color: colors.danger  },
-          ] as const).map(({ label, key, value, icon, color }) => {
-            const isActive = activeStatFilter === key
-            return (
-              <TouchableOpacity
-                key={label}
-                style={[s.statPill, { borderColor: color + '50' }, isActive && { backgroundColor: color, borderColor: color }]}
-                onPress={() => toggleStatFilter(key as StatFilter)}
-                activeOpacity={0.75}
-              >
-                <Ionicons name={icon} size={13} color={isActive ? colors.white : color} />
-                <Text style={[s.statPillCount, { color: isActive ? colors.white : colors.textPrimary }]}>{value}</Text>
-                <Text numberOfLines={1} style={[s.statPillLabel, { color: isActive ? 'rgba(255,255,255,0.75)' : colors.textMuted }]}>{label}</Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
-      )}
+        {/* Filter panel */}
+        {filtersOpen && (
+          <View style={s.filterPanel}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.presetRow}>
+              {PRESETS.map(p => (
+                <TouchableOpacity key={p.value} style={[s.chip, preset === p.value && s.chipActive]} onPress={() => applyPreset(p.value)} activeOpacity={0.7}>
+                  <Text style={[s.chipText, preset === p.value && s.chipTextActive]}>{p.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {preset === 'custom' && (
+              <View style={s.dateRow}>
+                <TouchableOpacity style={s.dateBtn} onPress={() => openPicker('from')} activeOpacity={0.8}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                  <Text style={s.dateBtnText}>{dateRange.from ? fmtShort(dateRange.from) : 'From date'}</Text>
+                </TouchableOpacity>
+                <Ionicons name="arrow-forward" size={14} color={colors.textDisabled} />
+                <TouchableOpacity style={s.dateBtn} onPress={() => openPicker('to')} activeOpacity={0.8}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                  <Text style={s.dateBtnText}>{dateRange.to ? fmtShort(dateRange.to) : 'To date'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.presetRow}>
+              {STATUS_FILTERS.map(sf => (
+                <TouchableOpacity key={sf.value} style={[s.chip, statusFilter === sf.value && s.chipActive]} onPress={() => setStatusFilter(sf.value)} activeOpacity={0.7}>
+                  <Text style={[s.chipText, statusFilter === sf.value && s.chipTextActive]}>{sf.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={s.filterFooter}>
+              <View style={s.activeRangeWrap}>
+                <Ionicons name="calendar" size={12} color={colors.primary} />
+                <Text style={s.activeRange}>
+                  {dateRange.from && dateRange.to ? `${fmtShort(dateRange.from)} – ${fmtShort(dateRange.to)}` : 'All time'}
+                </Text>
+              </View>
+              {isFiltered && (
+                <TouchableOpacity onPress={clearFilters} activeOpacity={0.7}>
+                  <Text style={s.clearText}>Clear filters</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Stat pills */}
+        {data && data.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.statPillRow} style={s.statPillScroll}>
+            {([
+              { label: 'Total',     key: null,        value: data.length,    icon: 'swap-horizontal',  color: colors.primary },
+              { label: 'Completed', key: 'completed', value: completedCount, icon: 'checkmark-circle', color: colors.success },
+              { label: 'Pending',   key: 'pending',   value: pendingCount,   icon: 'time',             color: colors.warning },
+              { label: 'Failed',    key: 'failed',    value: failedCount,    icon: 'close-circle',     color: colors.danger  },
+            ] as const).map(({ label, key, value, icon, color }) => {
+              const isActive = activeStatFilter === key
+              return (
+                <TouchableOpacity
+                  key={label}
+                  style={[s.statPill, { borderColor: color + '50' }, isActive && { backgroundColor: color, borderColor: color }]}
+                  onPress={() => toggleStatFilter(key as StatFilter)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name={icon} size={13} color={isActive ? colors.white : color} />
+                  <Text style={[s.statPillCount, { color: isActive ? colors.white : colors.textPrimary }]}>{value}</Text>
+                  <Text numberOfLines={1} style={[s.statPillLabel, { color: isActive ? 'rgba(255,255,255,0.75)' : colors.textMuted }]}>{label}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </ScrollView>
+        )}
+      </View>
 
       {/* ── List ── */}
       <ScrollView
