@@ -21,29 +21,45 @@ type Nav = NativeStackNavigationProp<SettingsStackParamList>
 const SCREENING_CONFIG = {
   cleared: { color: '#10B981', label: 'Cleared' },
   pending: { color: '#F59E0B', label: 'Pending' },
-  flagged:  { color: '#EF4444', label: 'Flagged' },
+  flagged: { color: '#EF4444', label: 'Flagged' },
 }
+
+type ScreeningFilter = '' | 'cleared' | 'pending' | 'flagged'
+
+const SCREENING_CHIPS: { label: string; value: ScreeningFilter; color: string }[] = [
+  { label: 'All',     value: '',        color: '' },
+  { label: 'Cleared', value: 'cleared', color: '#10B981' },
+  { label: 'Pending', value: 'pending', color: '#F59E0B' },
+  { label: 'Flagged', value: 'flagged', color: '#EF4444' },
+]
 
 export function BeneficiaryList() {
   const nav = useNavigation<Nav>()
   const colors = useColors()
   const s = useMemo(() => createStyles(colors), [colors])
-  const [search, setSearch] = useState('')
+  const [search, setSearch]         = useState('')
+  const [screening, setScreening]   = useState<ScreeningFilter>('')
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['beneficiaries'],
     queryFn: () => beneficiariesApi.list({ limit: 100 }).then((r) => r.data.data),
   })
 
-  const filtered = (data ?? []).filter((b) =>
-    !search ||
-    b.name.toLowerCase().includes(search.toLowerCase()) ||
-    b.currency.toLowerCase().includes(search.toLowerCase()) ||
-    b.country_code.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = (data ?? []).filter((b) => {
+    const matchSearch = !search
+      || b.name.toLowerCase().includes(search.toLowerCase())
+      || b.currency.toLowerCase().includes(search.toLowerCase())
+      || b.country_code.toLowerCase().includes(search.toLowerCase())
+    const matchScreening = !screening || b.screening_status === screening
+    return matchSearch && matchScreening
+  })
+
+  const isFiltered = !!search || !!screening
+  const clearFilters = () => { setSearch(''); setScreening('') }
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
+      {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => nav.goBack()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
@@ -51,7 +67,9 @@ export function BeneficiaryList() {
         <View style={s.headerMid}>
           <Text style={s.title}>Beneficiaries</Text>
           {data && data.length > 0 && (
-            <Text style={s.subtitle}>{data.length} saved</Text>
+            <Text style={s.subtitle}>
+              {filtered.length}{isFiltered && filtered.length !== data.length ? ` of ${data.length}` : ''} saved
+            </Text>
           )}
         </View>
         <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('BeneficiaryNew')} activeOpacity={0.85}>
@@ -59,6 +77,7 @@ export function BeneficiaryList() {
         </TouchableOpacity>
       </View>
 
+      {/* Search */}
       <View style={s.searchWrap}>
         <Ionicons name="search-outline" size={16} color={colors.textMuted} />
         <TextInput
@@ -76,6 +95,45 @@ export function BeneficiaryList() {
         )}
       </View>
 
+      {/* Screening status chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.chipRow}
+        style={s.chipScroll}
+      >
+        {SCREENING_CHIPS.map(chip => {
+          const isActive = screening === chip.value
+          const accentColor = chip.color || colors.primary
+          return (
+            <TouchableOpacity
+              key={chip.value}
+              style={[
+                s.chip,
+                isActive && { backgroundColor: accentColor, borderColor: accentColor },
+              ]}
+              onPress={() => setScreening(chip.value)}
+              activeOpacity={0.7}
+            >
+              {chip.color ? (
+                <View style={[s.chipDot, { backgroundColor: isActive ? colors.white : chip.color }]} />
+              ) : null}
+              <Text style={[s.chipText, isActive && s.chipTextActive]}>
+                {chip.label}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+
+        {isFiltered && (
+          <TouchableOpacity style={s.clearChip} onPress={clearFilters} activeOpacity={0.7}>
+            <Ionicons name="close" size={12} color={colors.danger} />
+            <Text style={s.clearChipText}>Clear</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+
+      {/* List */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
@@ -84,17 +142,17 @@ export function BeneficiaryList() {
         {filtered.length === 0 && !isLoading ? (
           <EmptyState
             icon="people-outline"
-            title={search ? 'No results' : 'No beneficiaries yet'}
-            subtitle={search ? 'Try a different search term' : 'Add a recipient to start sending international payments'}
-            actionLabel={search ? undefined : 'Add beneficiary'}
-            onAction={search ? undefined : () => nav.navigate('BeneficiaryNew')}
+            title={isFiltered ? 'No results' : 'No beneficiaries yet'}
+            subtitle={isFiltered ? 'Try a different search or filter' : 'Add a recipient to start sending international payments'}
+            actionLabel={isFiltered ? 'Clear filters' : 'Add beneficiary'}
+            onAction={isFiltered ? clearFilters : () => nav.navigate('BeneficiaryNew')}
           />
         ) : (
           <>
             <View style={s.group}>
               {filtered.map((item, idx) => {
                 const cColor = currencyColor(item.currency)
-                const screening = SCREENING_CONFIG[item.screening_status as keyof typeof SCREENING_CONFIG] ?? SCREENING_CONFIG.pending
+                const screeningCfg = SCREENING_CONFIG[item.screening_status as keyof typeof SCREENING_CONFIG] ?? SCREENING_CONFIG.pending
                 const isLast = idx === filtered.length - 1
                 return (
                   <TouchableOpacity
@@ -115,9 +173,9 @@ export function BeneficiaryList() {
                       </Text>
                     </View>
                     <View style={s.right}>
-                      <View style={[s.screeningPill, { backgroundColor: screening.color + '22' }]}>
-                        <View style={[s.screeningDot, { backgroundColor: screening.color }]} />
-                        <Text style={[s.screeningText, { color: screening.color }]}>{screening.label}</Text>
+                      <View style={[s.screeningPill, { backgroundColor: screeningCfg.color + '22' }]}>
+                        <View style={[s.screeningDot, { backgroundColor: screeningCfg.color }]} />
+                        <Text style={[s.screeningText, { color: screeningCfg.color }]}>{screeningCfg.label}</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={14} color={colors.textDisabled} style={{ marginTop: 2 }} />
                     </View>
@@ -158,12 +216,36 @@ const createStyles = (c: Colors) => StyleSheet.create({
 
   searchWrap: {
     flexDirection: 'row', alignItems: 'center',
-    marginHorizontal: screenPadding, marginBottom: spacing.base,
+    marginHorizontal: screenPadding, marginBottom: spacing.sm,
     backgroundColor: c.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: c.border,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.sm,
   },
   searchInput: { flex: 1, fontSize: fontSize.sm, color: c.textPrimary },
+
+  chipScroll: { marginBottom: spacing.sm },
+  chipRow: {
+    flexDirection: 'row', gap: spacing.sm,
+    paddingHorizontal: screenPadding,
+    paddingVertical: 2,
+  },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderRadius: radius.full, borderWidth: 1, borderColor: c.border,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
+    backgroundColor: c.surface,
+  },
+  chipDot: { width: 6, height: 6, borderRadius: 3 },
+  chipText: { fontSize: fontSize.xs, fontWeight: '600', color: c.textMuted },
+  chipTextActive: { color: c.white },
+
+  clearChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: radius.full, borderWidth: 1, borderColor: c.danger + '50',
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
+    backgroundColor: c.dangerFaded,
+  },
+  clearChipText: { fontSize: fontSize.xs, fontWeight: '600', color: c.danger },
 
   scroll: { paddingHorizontal: screenPadding, paddingBottom: spacing['3xl'], gap: spacing.md },
 
