@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { AppState, type AppStateStatus, useColorScheme } from 'react-native'
-import { NavigationContainer } from '@react-navigation/native'
+import { NavigationContainer, DarkTheme, DefaultTheme, type Theme } from '@react-navigation/native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -8,11 +8,39 @@ import { StatusBar } from 'expo-status-bar'
 
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
+import { darkColors, lightColors } from '@/theme/palette'
 import { AuthStack } from '@/navigation/AuthStack'
 import { AppTabs } from '@/navigation/AppTabs'
 import { BiometricPrompt } from '@/screens/BiometricPrompt'
 import { NetworkBanner } from '@/components/ui/NetworkBanner'
 import { AlertProvider } from '@/context/AlertContext'
+
+// Nav themes — override background/card/border so no white flashes on back transition
+const darkNavTheme: Theme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary:      darkColors.primary,
+    background:   darkColors.bg,
+    card:         darkColors.card,
+    text:         darkColors.textPrimary,
+    border:       darkColors.border,
+    notification: darkColors.primary,
+  },
+}
+
+const lightNavTheme: Theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary:      lightColors.primary,
+    background:   lightColors.bg,
+    card:         lightColors.card,
+    text:         lightColors.textPrimary,
+    border:       lightColors.border,
+    notification: lightColors.primary,
+  },
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,12 +108,14 @@ export default function App() {
     )
   }
 
+  const navTheme = resolvedTheme === 'dark' ? darkNavTheme : lightNavTheme
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: navTheme.colors.background }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AlertProvider>
-            <NavigationContainer linking={linking}>
+            <NavigationContainer theme={navTheme} linking={linking}>
               <StatusBar style={statusBarStyle} />
               {isAuthenticated ? <AppTabs /> : <AuthStack />}
               <NetworkBanner />
