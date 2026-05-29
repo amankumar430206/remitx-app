@@ -345,6 +345,7 @@ export function PaymentHistory() {
 
       {/* ── List ── */}
       <ScrollView
+        style={s.listScroll}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
         contentContainerStyle={s.scroll}
@@ -520,7 +521,8 @@ const createStyles = (c: Colors) => StyleSheet.create({
   statPillLabel: { fontSize: fontSize.xs, fontWeight: '600' },
 
   // List
-  scroll: { paddingBottom: spacing['3xl'], gap: spacing.xs },
+  listScroll: { flex: 1 },
+  scroll: { paddingBottom: spacing['3xl'], gap: spacing.xs, flexGrow: 1 },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: screenPadding,
