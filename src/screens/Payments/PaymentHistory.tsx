@@ -505,10 +505,10 @@ const createStyles = (c: Colors) => StyleSheet.create({
   clearText: { fontSize: fontSize.xs, color: c.danger, fontWeight: '600' },
 
   // Stat pills
-  statPillScroll: { marginBottom: spacing.sm },
+  statPillScroll: { marginBottom: spacing.sm, paddingVertical: spacing.sm },
   statPillRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: screenPadding, paddingVertical: spacing.xs,
+    flexDirection: 'row', gap: spacing.sm,
+    paddingHorizontal: screenPadding,
   },
   statPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
