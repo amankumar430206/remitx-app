@@ -2,7 +2,7 @@ import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 import { useNetworkLogStore } from '@/stores/networkLogStore'
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

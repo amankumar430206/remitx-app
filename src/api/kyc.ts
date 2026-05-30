@@ -4,6 +4,10 @@ export interface KycDocument {
   filename: string
   type: string
   path: string
+  storedAs?: string
+  mimetype?: string
+  size?: number
+  uploadedAt?: string
 }
 
 export interface KycApplication {
@@ -26,6 +30,10 @@ const kycApi = {
       '/compliance/kyc/documents', formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     ),
+
+  /** Returns the authenticated download URL for a KYC document. */
+  getDocumentUrl: (storedAs: string) =>
+    `${apiClient.defaults.baseURL ?? ''}/compliance/kyc/documents/${encodeURIComponent(storedAs)}`,
 }
 
 export default kycApi
