@@ -16,7 +16,9 @@ import { Button } from "@/components/ui/Button";
 import { useColors, type Colors } from "@/hooks/useColors";
 import { spacing, fontSize, radius } from "@/theme/spacing";
 import { useAuthStore } from "@/stores/authStore";
+import { useBrandStore } from "@/stores/brandStore";
 import authApi from "@/api/auth";
+import tenantsApi from "@/api/tenants";
 import { getApiError } from '@/utils/apiError'
 import { useAlert } from '@/hooks/useAlert'
 import { type AuthStackParamList } from "@/navigation/AuthStack";
@@ -26,22 +28,50 @@ type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 const DEFAULT_TENANT = process.env.EXPO_PUBLIC_TENANT_SLUG ?? "default";
 
 // ─── Dev quick-login presets ─────────────────────────────────────────────────
+
 interface DevUser {
   label: string;
-  role: string;
+  detail: string;
   email: string;
   password: string;
   tenant: string;
   color: string;
 }
 
-// Semantic colors — theme-independent
-const DEV_USERS: DevUser[] = [
-  { label: "Super Admin", role: "super_admin", email: "admin@remitx.com",   password: "Admin@RemitX2024!", tenant: "remitx", color: "#6366F1" },
-  { label: "Maker",       role: "maker",       email: "maker1@remitx.com",  password: "Test@1234!",        tenant: "remitx", color: "#10B981" },
-  { label: "Checker",     role: "checker",     email: "checker1@remitx.com",password: "Test@1234!",        tenant: "remitx", color: "#F59E0B" },
-  { label: "Client Admin",role: "client_admin",email: "cadmin@remitx.com",  password: "Test@1234!",        tenant: "remitx", color: "#3B82F6" },
-];
+interface DevGroup {
+  label: string;
+  slug: string;
+  isolated: boolean;
+  users: DevUser[];
+}
+
+const DEV_GROUPS: DevGroup[] = [
+  {
+    label: 'RemitX', slug: 'remitx', isolated: false,
+    users: [
+      { label: 'Super Admin',  detail: 'super_admin',  email: 'admin@remitx.com',    password: 'Admin@RemitX2024!', tenant: 'remitx', color: '#6366F1' },
+      { label: 'Client Admin', detail: 'client_admin', email: 'cadmin@remitx.com',   password: 'Test@1234!',        tenant: 'remitx', color: '#3B82F6' },
+      { label: 'Maker',        detail: 'maker',        email: 'maker1@remitx.com',   password: 'Test@1234!',        tenant: 'remitx', color: '#10B981' },
+      { label: 'Checker',      detail: 'checker',      email: 'checker1@remitx.com', password: 'Test@1234!',        tenant: 'remitx', color: '#F59E0B' },
+    ],
+  },
+  {
+    label: 'Acme Corp', slug: 'acme-corp', isolated: true,
+    users: [
+      { label: 'Client Admin', detail: 'manages org',       email: 'admin@acme.com',   password: 'Test@1234!', tenant: 'acme-corp', color: '#EF4444' },
+      { label: 'Maker',        detail: 'creates payments',  email: 'maker@acme.com',   password: 'Test@1234!', tenant: 'acme-corp', color: '#EF4444' },
+      { label: 'Checker',      detail: 'approves payments', email: 'checker@acme.com', password: 'Test@1234!', tenant: 'acme-corp', color: '#EF4444' },
+    ],
+  },
+  {
+    label: 'GlobalPay', slug: 'globalpay', isolated: true,
+    users: [
+      { label: 'Client Admin', detail: 'manages org',      email: 'admin@globalpay.com', password: 'Test@1234!', tenant: 'globalpay', color: '#3B82F6' },
+      { label: 'Maker',        detail: 'creates payments', email: 'maker@globalpay.com', password: 'Test@1234!', tenant: 'globalpay', color: '#3B82F6' },
+    ],
+  },
+]
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Login({ navigation }: Props) {
@@ -53,15 +83,16 @@ export function Login({ navigation }: Props) {
   const [tenantSlug, setTenantSlug] = useState(DEFAULT_TENANT);
   const [showTenant, setShowTenant] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [activeDevUser, setActiveDevUser] = useState<string | null>(null);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const setAuth = useAuthStore((state) => state.setAuth);
+  const setBrand = useBrandStore((s) => s.setBrand);
 
   const applyDevUser = (u: DevUser) => {
     setEmail(u.email);
     setPassword(u.password);
     setTenantSlug(u.tenant);
-    setActiveDevUser(u.role);
+    setActiveKey(u.email);
   };
 
   const handleLogin = async () => {
@@ -83,6 +114,14 @@ export function Login({ navigation }: Props) {
       }
 
       setAuth(payload.user, payload.accessToken, payload.refreshToken, tenantSlug);
+
+      // Fetch and apply tenant branding immediately — non-fatal if it fails
+      try {
+        const themeRes = await tenantsApi.theme();
+        const t = themeRes.data.data;
+        setBrand({ primaryColor: t.primaryColor, tenantName: t.tenantName, logoUrl: t.logoUrl ?? null });
+      } catch { /* non-fatal — palette defaults remain */ }
+
     } catch (err: unknown) {
       showAlert("Login failed", getApiError(err, "Invalid credentials. Please try again."));
     } finally {
@@ -98,6 +137,7 @@ export function Login({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Brand */}
           <View style={s.brandRow}>
             <View style={s.logoBox}>
               <Ionicons name="swap-horizontal" size={28} color={colors.primary} />
@@ -110,6 +150,7 @@ export function Login({ navigation }: Props) {
             <Text style={s.subheading}>Sign in to your account</Text>
           </View>
 
+          {/* Form card */}
           <View style={s.card}>
             <Input
               label="Email address"
@@ -156,6 +197,7 @@ export function Login({ navigation }: Props) {
             <Text style={s.footerBadgeText}>PCI-DSS compliant</Text>
           </View>
 
+          {/* ─── Dev quick-login ─────────────────────────────────────────── */}
           {__DEV__ && (
             <View style={s.devPanel}>
               <View style={s.devHeader}>
@@ -164,22 +206,42 @@ export function Login({ navigation }: Props) {
                 </View>
                 <Text style={s.devTitle}>Quick login</Text>
               </View>
-              <View style={s.devGrid}>
-                {DEV_USERS.map((u) => {
-                  const active = activeDevUser === u.role;
-                  return (
-                    <TouchableOpacity
-                      key={u.role}
-                      style={[s.devChip, { borderColor: u.color }, active && { backgroundColor: u.color }]}
-                      onPress={() => applyDevUser(u)}
-                      activeOpacity={0.75}
-                    >
-                      <Text style={[s.devChipText, active && s.devChipTextActive]}>{u.label}</Text>
-                      <Text style={[s.devChipEmail, active && s.devChipEmailActive]}>{u.email}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+
+              {DEV_GROUPS.map((group) => (
+                <View key={group.slug} style={s.devGroup}>
+                  {/* Group header */}
+                  <View style={s.devGroupHeader}>
+                    <Text style={s.devGroupLabel}>{group.label}</Text>
+                    <View style={s.devSlugBadge}>
+                      <Text style={s.devSlugText}>{group.slug}</Text>
+                    </View>
+                    {group.isolated && (
+                      <View style={s.devIsolatedBadge}>
+                        <Ionicons name="shield" size={9} color={colors.warning} />
+                        <Text style={s.devIsolatedText}>isolated</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* User chips */}
+                  <View style={s.devGrid}>
+                    {group.users.map((u) => {
+                      const active = activeKey === u.email;
+                      return (
+                        <TouchableOpacity
+                          key={u.email}
+                          style={[s.devChip, { borderColor: u.color }, active && { backgroundColor: u.color }]}
+                          onPress={() => applyDevUser(u)}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={[s.devChipLabel, active && s.devChipLabelActive]}>{u.label}</Text>
+                          <Text style={[s.devChipDetail, active && s.devChipDetailActive]}>{u.detail}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
             </View>
           )}
         </ScrollView>
@@ -189,37 +251,48 @@ export function Login({ navigation }: Props) {
 }
 
 const createStyles = (c: Colors) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: c.bg },
-  flex: { flex: 1 },
+  safe:   { flex: 1, backgroundColor: c.bg },
+  flex:   { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing["2xl"], paddingBottom: spacing["3xl"] },
 
-  brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing["2xl"] },
-  logoBox: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: c.primaryFaded, alignItems: "center", justifyContent: "center" },
-  brand: { fontSize: fontSize["2xl"], fontWeight: "800", color: c.textPrimary, letterSpacing: -0.5 },
+  brandRow:  { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing["2xl"] },
+  logoBox:   { width: 44, height: 44, borderRadius: radius.md, backgroundColor: c.primaryFaded, alignItems: "center", justifyContent: "center" },
+  brand:     { fontSize: fontSize["2xl"], fontWeight: "800", color: c.textPrimary, letterSpacing: -0.5 },
 
   headingBlock: { marginBottom: spacing["2xl"], gap: spacing.xs },
-  heading: { fontSize: fontSize["3xl"], fontWeight: "700", color: c.textPrimary, letterSpacing: -0.5 },
-  subheading: { fontSize: fontSize.md, color: c.textMuted },
+  heading:      { fontSize: fontSize["3xl"], fontWeight: "700", color: c.textPrimary, letterSpacing: -0.5 },
+  subheading:   { fontSize: fontSize.md, color: c.textMuted },
 
   card: { backgroundColor: c.card, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, padding: spacing.xl, gap: spacing.base, marginBottom: spacing.xl },
 
-  tenantToggle: { flexDirection: "row", alignItems: "center", gap: spacing.xs, alignSelf: "flex-start", paddingVertical: spacing.xs },
+  tenantToggle:      { flexDirection: "row", alignItems: "center", gap: spacing.xs, alignSelf: "flex-start", paddingVertical: spacing.xs },
   tenantToggleLabel: { fontSize: fontSize.sm, color: c.textMuted },
-  loginBtn: { marginTop: spacing.xs },
+  loginBtn:          { marginTop: spacing.xs },
 
-  footer: { textAlign: "center", fontSize: fontSize.xs, color: c.textDisabled, marginBottom: spacing.xs },
-  footerBadge: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs },
-  footerBadgeText: { fontSize: fontSize.xs, color: c.success },
+  footer:           { textAlign: "center", fontSize: fontSize.xs, color: c.textDisabled, marginBottom: spacing.xs },
+  footerBadge:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs },
+  footerBadgeText:  { fontSize: fontSize.xs, color: c.success },
 
-  devPanel: { marginTop: spacing.xl, borderRadius: radius.lg, borderWidth: 1, borderColor: c.warning, borderStyle: "dashed", padding: spacing.base, gap: spacing.md },
+  // ── Dev panel ───────────────────────────────────────────────────────────────
+  devPanel:  { marginTop: spacing.xl, borderRadius: radius.lg, borderWidth: 1, borderColor: c.warning, borderStyle: "dashed", padding: spacing.base, gap: spacing.lg },
   devHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  devBadge: { backgroundColor: c.warning, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  devBadge:  { backgroundColor: c.warning, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2 },
   devBadgeText: { fontSize: fontSize.xs, fontWeight: "700", color: c.black, letterSpacing: 1 },
-  devTitle: { fontSize: fontSize.sm, fontWeight: "600", color: c.warning },
-  devGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  devChip: { flex: 1, minWidth: "45%", borderRadius: radius.md, borderWidth: 1.5, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, gap: 2 },
-  devChipText: { fontSize: fontSize.sm, fontWeight: "700", color: c.textPrimary },
-  devChipTextActive: { color: c.white },
-  devChipEmail: { fontSize: fontSize.xs, color: c.textMuted },
-  devChipEmailActive: { color: "rgba(255,255,255,0.75)" },
+  devTitle:  { fontSize: fontSize.sm, fontWeight: "600", color: c.warning },
+
+  devGroup:  { gap: spacing.sm },
+
+  devGroupHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  devGroupLabel:  { fontSize: fontSize.sm, fontWeight: "700", color: c.textPrimary },
+  devSlugBadge:   { backgroundColor: c.surface, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  devSlugText:    { fontSize: 10, fontWeight: "600", color: c.textMuted, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+  devIsolatedBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: c.warningFaded, borderRadius: radius.sm, paddingHorizontal: spacing.xs, paddingVertical: 2 },
+  devIsolatedText:  { fontSize: 9, fontWeight: "700", color: c.warning },
+
+  devGrid:     { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  devChip:     { flex: 1, minWidth: "45%", borderRadius: radius.md, borderWidth: 1.5, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, gap: 2 },
+  devChipLabel:       { fontSize: fontSize.sm, fontWeight: "700", color: c.textPrimary },
+  devChipLabelActive: { color: c.white },
+  devChipDetail:       { fontSize: fontSize.xs, color: c.textMuted },
+  devChipDetailActive: { color: "rgba(255,255,255,0.75)" },
 });

@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useNavigation } from '@react-navigation/native'
 import { type NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useAuthStore } from '@/stores/authStore'
+import { useBrandStore } from '@/stores/brandStore'
 import { useColors, type Colors } from '@/hooks/useColors'
 import { useThemeStore, type ThemeMode } from '@/stores/themeStore'
 import { spacing, fontSize, radius, screenPadding } from '@/theme/spacing'
@@ -70,6 +71,7 @@ export function Profile() {
   const { showAlert } = useAlert()
   const nav = useNavigation<Nav>()
   const { user, clearAuth } = useAuthStore()
+  const clearBrand = useBrandStore((s) => s.clearBrand)
   const colors = useColors()
   const s = useMemo(() => createStyles(colors), [colors])
   const themeMode = useThemeStore((st) => st.mode)
@@ -86,7 +88,7 @@ export function Profile() {
   const handleLogout = () => {
     showAlert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: clearAuth },
+      { text: 'Sign out', style: 'destructive', onPress: () => { clearBrand(); clearAuth() } },
     ])
   }
 

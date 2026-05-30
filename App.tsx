@@ -8,7 +8,9 @@ import { StatusBar } from 'expo-status-bar'
 
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
+import { useBrandStore } from '@/stores/brandStore'
 import { darkColors, lightColors } from '@/theme/palette'
+import tenantsApi from '@/api/tenants'
 import { AuthStack } from '@/navigation/AuthStack'
 import { AppTabs } from '@/navigation/AppTabs'
 import { BiometricPrompt } from '@/screens/BiometricPrompt'
@@ -63,8 +65,21 @@ const linking = {
 }
 
 export default function App() {
-  const { isAuthenticated, clearAuth } = useAuthStore()
+  const { isAuthenticated, _hasHydrated, clearAuth } = useAuthStore()
   const themeMode = useThemeStore((s) => s.mode)
+  const setBrand = useBrandStore((s) => s.setBrand)
+
+  // On app boot, if the user is already authenticated (session restored from
+  // SecureStore), re-fetch their tenant theme so brand colours are always fresh.
+  useEffect(() => {
+    if (!_hasHydrated || !isAuthenticated) return
+    tenantsApi.theme()
+      .then(res => {
+        const t = res.data.data
+        setBrand({ primaryColor: t.primaryColor, tenantName: t.tenantName, logoUrl: t.logoUrl ?? null })
+      })
+      .catch(() => { /* non-fatal — palette defaults will be used */ })
+  }, [_hasHydrated, isAuthenticated, setBrand])
   const systemScheme = useColorScheme()
   const resolvedTheme = themeMode === 'system' ? (systemScheme ?? 'dark') : themeMode
   const statusBarStyle = resolvedTheme === 'light' ? 'dark' : 'light'

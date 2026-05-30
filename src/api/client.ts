@@ -102,6 +102,9 @@ apiClient.interceptors.response.use(
         return apiClient(original)
       } catch {
         useAuthStore.getState().clearAuth()
+        // Lazily clear brand without creating a circular import
+        const { useBrandStore } = await import('@/stores/brandStore')
+        useBrandStore.getState().clearBrand()
         return Promise.reject(error)
       }
     }
