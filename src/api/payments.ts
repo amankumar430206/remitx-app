@@ -13,12 +13,37 @@ export interface Payment {
   reference?: string
   idempotency_key: string
   user_id: string
+  checker_id?: string | null
+  account_id?: string | null
   beneficiary_id: string
+  note?: string | null
   created_at: string
   updated_at: string
   completed_at?: string
+  // Beneficiary (joined)
   beneficiary_name?: string | null
   beneficiary_country_code?: string | null
+  beneficiary_bank_name?: string | null
+  beneficiary_account_number?: string | null
+  beneficiary_iban?: string | null
+  beneficiary_swift_bic?: string | null
+  beneficiary_currency?: string | null
+  // Submitter (joined)
+  submitter_email?: string | null
+  submitter_first_name?: string | null
+  submitter_last_name?: string | null
+  // Checker / approver (joined)
+  checker_email?: string | null
+  checker_first_name?: string | null
+  checker_last_name?: string | null
+  // Source account (joined)
+  account_currency?: string | null
+  account_number_ref?: string | null
+  // Provider
+  provider_name?: string | null
+  provider_payment_id?: string | null
+  ops_notes?: string | null
+  tenant_name?: string | null
   status_history?: Array<{
     id: string
     status: string
@@ -61,6 +86,9 @@ const payments = {
 
   reject: (id: string, reason: string) =>
     apiClient.put<{ success: boolean; data: Payment }>(`/payments/${id}/reject`, { reason }),
+
+  cancel: (id: string) =>
+    apiClient.put<{ success: boolean; data: Payment }>(`/payments/${id}/cancel`),
 
   approvalQueue: () =>
     apiClient.get<{ success: boolean; data: Payment[] }>('/payments/approval-queue'),
