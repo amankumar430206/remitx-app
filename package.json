@@ -6,7 +6,17 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:dev:android": "node scripts/build.js development android",
+    "build:dev:ios": "node scripts/build.js development ios",
+    "build:preview:android": "node scripts/build.js preview android",
+    "build:preview:ios": "node scripts/build.js preview ios",
+    "build:preview": "node scripts/build.js preview all",
+    "build:prod:android": "node scripts/build.js production android",
+    "build:prod:ios": "node scripts/build.js production ios",
+    "build:local:android": "node scripts/build.js preview android --local",
+    "build:list": "node scripts/build.js --list",
+    "update:preview": "eas update --branch preview --message"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
