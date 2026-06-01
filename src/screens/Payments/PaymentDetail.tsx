@@ -62,10 +62,11 @@ function SectionHeader({ icon, title, s, colors }: {
 }
 
 function InfoRow({
-  label, value, mono, copyable, last, s, colors,
+  label, value, valueNode, mono, copyable, last, s, colors,
 }: {
   label: string
-  value: string
+  value?: string
+  valueNode?: React.ReactNode
   mono?: boolean
   copyable?: boolean
   last?: boolean
@@ -73,24 +74,27 @@ function InfoRow({
   colors: Colors
 }) {
   const handleCopy = () => {
-    // expo-clipboard or fallback
     Alert.alert('Copied', `${label} copied to clipboard.`, [{ text: 'OK' }])
   }
   return (
     <View style={[s.infoRow, last && s.infoRowLast]}>
       <Text style={s.infoLabel}>{label}</Text>
-      <TouchableOpacity
-        style={s.infoValueWrap}
-        onPress={copyable ? handleCopy : undefined}
-        activeOpacity={copyable ? 0.6 : 1}
-      >
-        <Text style={[s.infoValue, mono && s.infoValueMono]} numberOfLines={2}>
-          {value}
-        </Text>
-        {copyable && (
-          <Ionicons name="copy-outline" size={13} color={colors.textDisabled} style={{ marginLeft: 5 }} />
-        )}
-      </TouchableOpacity>
+      {valueNode ? (
+        <View style={s.infoValueWrap}>{valueNode}</View>
+      ) : (
+        <TouchableOpacity
+          style={s.infoValueWrap}
+          onPress={copyable ? handleCopy : undefined}
+          activeOpacity={copyable ? 0.6 : 1}
+        >
+          <Text style={[s.infoValue, mono && s.infoValueMono]} numberOfLines={2}>
+            {value ?? ''}
+          </Text>
+          {copyable && (
+            <Ionicons name="copy-outline" size={13} color={colors.textDisabled} style={{ marginLeft: 5 }} />
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   )
 }
@@ -494,9 +498,15 @@ export function PaymentDetail({ navigation, route }: Props) {
             <Ionicons name={statusIcon(p.status)} size={26} color={sc} />
           </View>
           <Text style={s.heroAmount}>{formatMoney(p.source_amount, p.source_currency)}</Text>
-          <View style={[s.statusPill, { backgroundColor: sc + '22', borderColor: sc + '44' }]}>
-            <View style={[s.statusDot, { backgroundColor: sc }]} />
-            <Text style={[s.statusText, { color: sc }]}>{statusLabel(p.status)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+            <View style={[s.statusPill, { backgroundColor: sc + '22', borderColor: sc + '44' }]}>
+              <View style={[s.statusDot, { backgroundColor: sc }]} />
+              <Text style={[s.statusText, { color: sc }]}>{statusLabel(p.status)}</Text>
+            </View>
+            <View style={[s.statusPill, { backgroundColor: colors.danger + '22', borderColor: colors.danger + '44' }]}>
+              <Ionicons name="arrow-down" size={10} color={colors.danger} />
+              <Text style={[s.statusText, { color: colors.danger }]}>Debit</Text>
+            </View>
           </View>
           <View style={s.routeRow}>
             <View style={s.routeBox}>
@@ -516,6 +526,16 @@ export function PaymentDetail({ navigation, route }: Props) {
         {/* ── Transaction ── */}
         <SectionHeader icon="swap-horizontal-outline" title="Transaction" s={s} colors={colors} />
         <View style={s.card}>
+          <InfoRow
+            label="Type"
+            valueNode={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.danger + '22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: colors.danger + '44' }}>
+                <Ionicons name="arrow-down" size={11} color={colors.danger} />
+                <Text style={{ color: colors.danger, fontSize: 12, fontWeight: '600' }}>Debit</Text>
+              </View>
+            }
+            s={s} colors={colors}
+          />
           <InfoRow label="Transfer amount" value={formatMoney(p.source_amount, p.source_currency)} s={s} colors={colors} />
           <InfoRow label="Fee" value={formatMoney(hasFee ? p.fee_amount : '0', p.source_currency)} s={s} colors={colors} />
           {hasFee && (
